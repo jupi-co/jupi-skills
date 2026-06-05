@@ -14,19 +14,23 @@ All three are bundled in a single plugin, `jupi-skills`.
 
 ---
 
-## Prerequisites: connect the Jupi MCP
+## The Jupi MCP
 
-The skills call the **Jupi MCP server** at `https://apis.jupi.co/mcp`. Connect it once as a **claude.ai connector** (account-level) and it's available in every Claude Code and Cowork session automatically — tools appear namespaced as `mcp__claude_ai_Jupi__…` (the skills also handle the bare `mcp__Jupi__…` form).
+The skills call the **Jupi MCP server** at `https://apis.jupi.co/mcp` (tools appear as `mcp__Jupi__…`, or `mcp__claude_ai_Jupi__…` when connected via claude.ai — the skills handle both).
 
-To wire it per-project instead, add to the project's `.mcp.json`:
+**Claude Code & Cowork — nothing to do.** The `jupi-skills` plugin **bundles the Jupi MCP**, so installing the plugin (below) also registers and starts the server automatically. No `.mcp.json` and no claude.ai connector required.
+
+**Cursor — add it manually** (Cursor doesn't read plugins, so it won't get the bundled server). Create or edit `.cursor/mcp.json` in your project:
 
 ```json
 {
   "mcpServers": {
-    "Jupi": { "type": "http", "url": "https://apis.jupi.co/mcp" }
+    "Jupi": { "url": "https://apis.jupi.co/mcp" }
   }
 }
 ```
+
+Then reload the window. (A global `~/.cursor/mcp.json` works too if you want it in every project.)
 
 ### Workspace config (per project)
 
@@ -92,6 +96,8 @@ Cursor doesn't read `marketplace.json`; it consumes the skill folders directly. 
 - **Manual copy:** copy a skill folder into the project's `.cursor/skills/<skill>/` (or `.claude/skills/<skill>/`, which Cursor also reads), then reload the window (Cmd/Ctrl+Shift+P → "Developer: Reload Window").
 
 Cursor is project-scoped — add the skills per project.
+
+> **Cursor needs the MCP too.** The bundled Jupi MCP only ships to Claude Code/Cowork. In Cursor, also add it manually to `.cursor/mcp.json` (see [The Jupi MCP](#the-jupi-mcp) above) — without it the skills load but their Jupi calls have nothing to call.
 
 ### Optional: pre-wire install for a consuming repo
 
