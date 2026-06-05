@@ -1,0 +1,16 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
+  "name": "jupi-skills",
+  "owner": {
+    "name": "Jupi",
+    "email": "a@jupi.co"
+  },
+  "description": "Agent Skills for capturing and surfacing team decisions with Jupi — search, log, and submit decisions from inside Claude Code, Cowork, and Cursor.",
+  "plugins": [
+    {
+      "name": "jupi-skills",
+      "source": "./plugins/jupi-skills",
+      "description": "Decision skills backed by the Jupi MCP: search-decisions (find prior decisions), log-decision (record a settled call), submit-decision (hand an open call to a decider)."
+    }
+  ]
+}

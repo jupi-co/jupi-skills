@@ -1,0 +1,5 @@
+.DS_Store
+
+# Consumer-side, never committed here (documented for contributors who test locally)
+.claude/settings.local.json
+.claude/jupi.local.json

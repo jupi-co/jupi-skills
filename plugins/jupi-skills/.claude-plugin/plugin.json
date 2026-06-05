@@ -1,0 +1,8 @@
+{
+  "name": "jupi-skills",
+  "description": "Decision skills backed by the Jupi MCP: search-decisions, log-decision, submit-decision.",
+  "author": { "name": "Jupi", "email": "a@jupi.co" },
+  "homepage": "https://github.com/jupi-co/jupi-skills",
+  "license": "MIT",
+  "keywords": ["jupi", "decisions", "decision-log", "mcp", "knowledge"]
+}
