@@ -12,43 +12,7 @@ These skills let an agent (in Claude Code, Cowork, or Cursor) work with your tea
 
 All three are bundled in a single plugin, `jupi-skills`.
 
----
-
-## The Jupi MCP
-
-The skills call the **Jupi MCP server** at `https://apis.jupi.co/mcp` (tools appear as `mcp__Jupi__…`, or `mcp__claude_ai_Jupi__…` when connected via claude.ai — the skills handle both).
-
-**Claude Code & Cowork — nothing to do.** The `jupi-skills` plugin **bundles the Jupi MCP**, so installing the plugin (below) also registers and starts the server automatically. No `.mcp.json` and no claude.ai connector required.
-
-**Cursor — add it manually** (Cursor doesn't read plugins, so it won't get the bundled server). Create or edit `.cursor/mcp.json` in your project:
-
-```json
-{
-  "mcpServers": {
-    "Jupi": { "url": "https://apis.jupi.co/mcp" }
-  }
-}
-```
-
-Then reload the window. (A global `~/.cursor/mcp.json` works too if you want it in every project.)
-
-### Workspace config (per project)
-
-The skills target a Jupi **workspace slug**. Put it in `.claude/jupi.local.json` (gitignored — never commit it):
-
-```json
-{
-  "workspace": "<your-group-slug>",
-  "contacts": {
-    "Eng Lead": "22222222-2222-4222-8222-222222222222"
-  }
-}
-```
-
-- `workspace` — required; used as `groupSlug` on every Jupi call.
-- `contacts` — optional name→Jupi-user-UUID map used by **submit-decision** to assign a decider without re-typing UUIDs.
-
-If the file is missing, the skills ask for the slug and offer to save it.
+> The skills call the **Jupi MCP server** (`https://apis.jupi.co/mcp`). In Claude Code & Cowork it's **bundled with the plugin** — nothing to install separately. Cursor needs it added manually (see [Cursor](#cursor-no-marketplace--same-skillmd-folders)).
 
 ---
 
@@ -76,6 +40,8 @@ Invoke a skill (namespaced by plugin):
 /jupi-skills:submit-decision
 ```
 
+The plugin **bundles the Jupi MCP**, so it's registered automatically when the plugin installs — no separate MCP setup, no `.mcp.json`, no claude.ai connector. On first use, approve the one-time authentication prompt.
+
 They also auto-trigger from natural phrasing — e.g. "have we decided X?" (search), "log that we're going with Y" (log), "escalate this to the eng lead" (submit).
 
 > **Why `@release`?** Consumers track the `release` branch, not `main`. Day-to-day edits land on `main`; a change ships to you only when it's promoted to `release`. There are no version numbers — the effective version is the commit SHA at `release`, so every promotion is one clean update.
@@ -97,7 +63,15 @@ Cursor doesn't read `marketplace.json`; it consumes the skill folders directly. 
 
 Cursor is project-scoped — add the skills per project.
 
-> **Cursor needs the MCP too.** The bundled Jupi MCP only ships to Claude Code/Cowork. In Cursor, also add it manually to `.cursor/mcp.json` (see [The Jupi MCP](#the-jupi-mcp) above) — without it the skills load but their Jupi calls have nothing to call.
+**Cursor also needs the MCP.** Plugins don't reach Cursor, so the bundled server doesn't apply here — add the Jupi MCP once to `.cursor/mcp.json` (or global `~/.cursor/mcp.json`), then reload the window. Without it the skills load but their Jupi calls have nothing to reach.
+
+```json
+{
+  "mcpServers": {
+    "Jupi": { "url": "https://apis.jupi.co/mcp" }
+  }
+}
+```
 
 ### Optional: pre-wire install for a consuming repo
 
@@ -120,12 +94,33 @@ This is opt-in by the consuming repo, not something this marketplace controls.
 
 ---
 
+## Configuration: point the skills at your workspace
+
+Once installed, the skills need to know which Jupi **workspace** to act on. Put the slug in `.claude/jupi.local.json` at the root of the project you're working in (gitignored — never commit it):
+
+```json
+{
+  "workspace": "<your-group-slug>",
+  "contacts": {
+    "Eng Lead": "22222222-2222-4222-8222-222222222222"
+  }
+}
+```
+
+- `workspace` — required; used as `groupSlug` on every Jupi call.
+- `contacts` — optional name→Jupi-user-UUID map used by **submit-decision** to assign a decider without re-typing UUIDs.
+
+If the file is missing, the skills just ask for the slug and offer to save it — so this is optional convenience, not a blocker.
+
+---
+
 ## Repo layout
 
 ```
 .claude-plugin/marketplace.json        the catalog
 plugins/jupi-skills/
   .claude-plugin/plugin.json           plugin manifest (no version — by design)
+  .mcp.json                            bundled Jupi MCP (auto-registers on install)
   skills/
     search-decisions/SKILL.md
     log-decision/SKILL.md
