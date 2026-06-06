@@ -12,7 +12,7 @@ These skills let an agent (in Claude Code, Cowork, or Cursor) work with your tea
 
 All three are bundled in a single plugin, `jupi-skills`.
 
-> The skills call the **Jupi MCP server** (`https://apis.jupi.co/mcp`). In Claude Code & Cowork it's **bundled with the plugin** — nothing to install separately. Cursor needs it added manually (see [Cursor](#cursor-no-marketplace--same-skillmd-folders)).
+> The skills call the **Jupi MCP server** (`https://apis.jupi.co/mcp`). In Claude Code & Cowork it's **bundled with the plugin** — nothing to install separately. Cursor needs it added manually (see [Cursor](#cursor)).
 
 ---
 
@@ -54,14 +54,25 @@ Enable **per-marketplace auto-update** for `jupi-skills` in the `/plugin` interf
 /plugin marketplace update jupi-skills
 ```
 
-### Cursor (no marketplace — same SKILL.md folders)
+### Cursor
 
-Cursor doesn't read `marketplace.json`; it consumes the skill folders directly. Two paths:
+Cursor doesn't read `marketplace.json` or load Claude Code plugins, so it can't use the marketplace above. Install the same skills straight from this repo with the open [`skills` CLI](https://github.com/vercel-labs/skills) (one installer, works across Cursor and ~80 other agents):
 
-- **GitHub install (auto-synced):** install a skill folder by its repo path, e.g. `jupi-co/jupi-skills` → `plugins/jupi-skills/skills/search-decisions`. Stays synced with this repo.
-- **Manual copy:** copy a skill folder into the project's `.cursor/skills/<skill>/` (or `.claude/skills/<skill>/`, which Cursor also reads), then reload the window (Cmd/Ctrl+Shift+P → "Developer: Reload Window").
+```bash
+# from your project root — installs all three into .agents/skills/ (which Cursor reads)
+npx -y skills add jupi-co/jupi-skills --skill '*' -a cursor
 
-Cursor is project-scoped — add the skills per project.
+# pull the latest from this repo anytime
+npx -y skills update
+```
+
+- **Scope:** project by default (lands in the repo, shareable with the team); add `-g` to install globally for all your projects. Add `--copy` to vendor independent copies instead of symlinking to a canonical store.
+- After install, reload the window (Cmd/Ctrl+Shift+P → "Developer: Reload Window") if Cursor doesn't pick the skills up immediately.
+
+No-CLI alternatives:
+
+- **Settings UI (auto-synced):** Cursor → Settings → Rules → Add Rule → **Remote Rule (GitHub)** → paste `https://github.com/jupi-co/jupi-skills`. Per-user; stays synced with this repo.
+- **Manual copy:** copy a skill folder into `.cursor/skills/<skill>/` (or `.claude/skills/<skill>/`, which Cursor also reads), then reload.
 
 **Cursor also needs the MCP.** Plugins don't reach Cursor, so the bundled server doesn't apply here — add the Jupi MCP once to `.cursor/mcp.json` (or global `~/.cursor/mcp.json`), then reload the window. Without it the skills load but their Jupi calls have nothing to reach.
 
