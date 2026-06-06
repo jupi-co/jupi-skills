@@ -21,14 +21,14 @@ All three are bundled in a single plugin, `jupi-skills`.
 ### Claude Code & Cowork (plugin marketplace)
 
 ```
-/plugin marketplace add jupi-co/jupi-skills@release
+/plugin marketplace add jupi-co/jupi-skills
 /plugin install jupi-skills@jupi-skills
 ```
 
 CLI equivalent (handy for scripting / Cowork setup):
 
 ```bash
-claude plugin marketplace add jupi-co/jupi-skills@release
+claude plugin marketplace add jupi-co/jupi-skills
 claude plugin install jupi-skills@jupi-skills
 ```
 
@@ -44,7 +44,7 @@ The plugin **bundles the Jupi MCP**, so it's registered automatically when the p
 
 They also auto-trigger from natural phrasing — e.g. "have we decided X?" (search), "log that we're going with Y" (log), "escalate this to the eng lead" (submit).
 
-> **Why `@release`?** Consumers track the `release` branch, not `main`. Day-to-day edits land on `main`; a change ships to you only when it's promoted to `release`. There are no version numbers — the effective version is the commit SHA at `release`, so every promotion is one clean update.
+> **Versioning:** none, by design. Consumers track `main` (the default branch); the effective version is its latest commit SHA. Every commit that lands on `main` is one clean update for everyone — no version bumps, no release bookkeeping. So keep `main` shippable.
 
 ### Auto-update
 
@@ -81,7 +81,7 @@ A repo that wants these skills available to everyone who clones it can add to it
 {
   "extraKnownMarketplaces": {
     "jupi-skills": {
-      "source": { "source": "github", "repo": "jupi-co/jupi-skills", "ref": "release" }
+      "source": { "source": "github", "repo": "jupi-co/jupi-skills", "ref": "main" }
     }
   },
   "enabledPlugins": {
@@ -131,7 +131,7 @@ CONTRIBUTING.md                        how to add/edit a skill and ship it
 
 ## Versioning
 
-Deliberately **none**. No `version` field anywhere → the version resolves to the source commit SHA, so updates ship with zero release bookkeeping. See [CONTRIBUTING.md](CONTRIBUTING.md) for the `main` → `release` flow.
+Deliberately **none**. No `version` field anywhere → the version resolves to the latest commit SHA on `main`, so updates ship with zero release bookkeeping. See [CONTRIBUTING.md](CONTRIBUTING.md) for the workflow.
 
 ## License
 
