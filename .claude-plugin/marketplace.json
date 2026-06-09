@@ -11,6 +11,11 @@
       "name": "jupi-skills",
       "source": "./plugins/jupi-skills",
       "description": "Decision skills backed by the Jupi MCP: search-decisions (find prior decisions), log-decision (record a settled call), submit-decision (hand an open call to a decider)."
+    },
+    {
+      "name": "auto-jupi",
+      "source": "./plugins/auto-jupi",
+      "description": "Proactive decision engine: maintains context on you and your work, turns incoming signals into ready-to-post Jupi decisions (each option carrying an executable action), and runs as daily local routines. Includes /setup onboarding."
     }
   ]
 }
