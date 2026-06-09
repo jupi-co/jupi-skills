@@ -21,8 +21,8 @@ So to log an already-made decision in one shot, you synthesize the chosen option
 
 Provided by the Jupi MCP server (may appear namespaced as `mcp__Jupi__…` or `mcp__claude_ai_Jupi__…`):
 
-- `create-decision-tool` — creates a STARTED decision. Pass `groupSlug`, `title`, `description` (the context), and `private: true`. **Omit `id` and `ownerId`**: the server generates the id and sets you (the authenticated caller) as owner — which also makes you the decision's maker, so you're allowed to finalize it. Returns `{ id, url, … }`.
-  - `private: true` is the default here: a logged decision is your own record, so it's created owner-only and does **not** notify the workspace. Pass `false` only when the user explicitly wants the logged decision visible to everyone in the workspace.
+- `create-decision-tool` — creates a STARTED decision. Pass `groupSlug`, `title`, `description` (the context), and `allowWorkspaceContributions: false`. **Omit `id` and `ownerId`**: the server generates the id and sets you (the authenticated caller) as owner — which also makes you the decision's maker, so you're allowed to finalize it. Returns `{ id, url, … }`.
+  - `allowWorkspaceContributions: false` is the default here: a logged decision is your own record, so it's created owner-only and does **not** notify the workspace. Omit it (or pass `true`) only when the user explicitly wants the logged decision visible to everyone in the workspace.
 - `finalize-decision-tool` — closes a STARTED decision. Pass `groupSlug`, `decisionId`, `selectedOptions` (≥1 of `{id, title}`), and `closingText` (the rationale). Caller must be the decision's maker — which you are, from the create step.
 
 ## Workspace setup
@@ -43,8 +43,8 @@ If it's missing, ask for the slug, use it for this run, and offer to save it. Ne
    - **rationale** — _why_; becomes `closingText`. This is what makes the record worth keeping, so don't skip it. Pull it from the discussion if you can.
    - Optionally a **description** — extra context (links, the situation that prompted it). Goes in `create`'s `description`. **Format it as HTML** (`<p>`, `<ul>`/`<li>`, `<strong>`) — Jupi renders the description as rich text, not Markdown.
 
-2. **Create** the decision (private by default — owner-only):
-   `create-decision-tool({ groupSlug, title, description?, private: true })`. Capture the returned `id` and `url`.
+2. **Create** the decision (owner-only by default):
+   `create-decision-tool({ groupSlug, title, description?, allowWorkspaceContributions: false })`. Capture the returned `id` and `url`.
 
 3. **Generate a UUID** for the synthetic option. Don't hand-fabricate one — produce a real v4 so it always validates, e.g. `uuidgen` or `python3 -c "import uuid; print(uuid.uuid4())"`.
 
