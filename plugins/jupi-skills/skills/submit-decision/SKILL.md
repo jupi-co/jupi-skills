@@ -21,6 +21,7 @@ Inputs you'll pass:
 - `title` — the question, sharply stated.
 - `description` — the framing (see below). This is mandatory in spirit: a decision with no context is a decision the assignee can't act on.
 - `makerId` — the **Jupi user UUID** of the person who should decide. They become the decision's _maker_ (the only role allowed to finalize); you (the authenticated caller) are recorded as _owner_.
+- `allowWorkspaceContributions` — pass **`false`** (the default for this skill). The decision is then visible only to you (owner) and the assigned `makerId` — who can always see and finalize it — so submitting it does **not** notify or expose it to the whole workspace. This keeps a targeted hand-off targeted. Omit it (or pass `true`) only when the user explicitly wants everyone in the workspace to see and weigh in.
 - Omit `id` and `ownerId` — the server generates the id and sets you as owner.
 
 Returns `{ id, url, makerId, … }`.
@@ -64,8 +65,8 @@ A naked question ("Postgres or Dynamo?") wastes the decider's time and usually b
 1. **Resolve the workspace** slug from `.claude/jupi.local.json` (prompt + offer to save if missing).
 2. **Resolve `makerId`** via the contacts flow above.
 3. **Write the framing** into a `description` (as HTML) covering context / options / lean / what's needed.
-4. **Create** the decision:
-   `create-decision-tool({ groupSlug, title, description, makerId })`.
+4. **Create** the decision (owner + assignee only by default):
+   `create-decision-tool({ groupSlug, title, description, makerId, allowWorkspaceContributions: false })`.
 5. **Stop there — do not finalize.** Report back the decision `url` and who it's assigned to, and tell the user to share the link with that person (the decider opens it in Jupi to weigh in and close it).
 
 ## Example
