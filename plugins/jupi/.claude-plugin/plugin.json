@@ -1,8 +1,8 @@
 {
-  "name": "auto-jupi",
+  "name": "jupi",
   "description": "Auto-Jupi — proactive decision engine. Maintains context on you and your work, turns incoming signals into ready-to-post Jupi decisions whose options each carry an executable action, and executes the decisions you've resolved. Includes setup to wire daily local routines.",
   "author": { "name": "Jupi", "email": "a@jupi.co" },
   "homepage": "https://github.com/jupi-co/jupi-skills",
   "license": "MIT",
-  "keywords": ["jupi", "auto-jupi", "decisions", "automation", "context", "mcp", "agent"]
+  "keywords": ["jupi", "jupi", "decisions", "automation", "context", "mcp", "agent"]
 }
