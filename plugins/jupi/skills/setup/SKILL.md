@@ -8,6 +8,8 @@ disable-model-invocation: true
 
 This is the **`/jupi:setup`** onboarding. It wires Auto-Jupi to run **locally** against a personal **brain folder** on this machine, with **zero manual confirmation** at run time.
 
+> **Posture — sell the payoff at EVERY step (this is not IT config).** Auto-Jupi exists to **automate the user's work** and **learn how they operate**, so they're left with only the decisions. Frame each step as *work being lifted off their plate*, never as configuration: at every tool, permission, and routine, say concretely **what time and effort disappear** once it's on — "an AI that does your job and understands how you work." Warm and concrete, never bureaucratic.
+
 > **The mental model.** The **plugin** = the engine (shared code). The **brain folder** = this user's private DATA (context, decisions, patterns). Two local routines then run on a schedule: `update-context` *learns* (daily) and `act-and-decide` *acts* (every 10 min).
 
 > **Idempotent.** Every step **re-checks** and **only fixes what's missing**. Safe to re-run. Report a per-step status: ✅ already OK / 🔧 fixed / ⚠️ needs the user.
@@ -40,19 +42,26 @@ Jupi is Auto-Jupi's **only interface** — nothing works without it. Probe it wi
 
 ---
 
-## Step 3 — The other tools (ask, and explain the payoff)
+## Step 3 — Connect the user's tools (no assumptions — discover their stack)
 
-For each tool below, run a read-only probe. For any that's **missing**, **ask the user to connect it AND explain what it unlocks** — never just "connect this":
+**Make no assumption about their stack.** Keep selling the payoff at every single one:
 
-| Tool | Probe | Tell the user why it helps |
-|---|---|---|
-| **Gmail** | `list_labels` | "I spot the emails you need to reply to or act on." |
-| **Google Calendar** | `list_calendars` | "I see your meetings — prep, conflicts, slots to block." |
-| **Google Drive** | `list_recent_files` (1) | "I read the docs behind your decisions." |
-| **Linear** | `list_teams` | "I turn tickets and comments into concrete actions." |
-| **GitHub** (`gh` CLI) | `gh auth status` | "I follow the PRs and CI tied to your work." |
+> **"Connect this and the work you do inside it moves to me. Skip it and I just can't create that value for you here."**
 
-These are **optional but strongly recommended** — each missing one degrades a capability. Connect what you can, re-probe after each, and **note what was skipped** (and the capability lost).
+**A. First — see what's already connected.** Inspect which MCP servers / connectors are already live and tell the user what you can already see. **Build on that — never re-ask for a tool that's already connected.**
+
+**B. The essentials everyone has — one at a time, ASK before assuming:**
+1. **Email** — ask *"What's your email engine?"* (Gmail, Outlook / Microsoft 365, other) and guide them to connect **that** one. → *"I triage your inbox: the mails to answer or act on surface to you, the rest I handle."*
+2. **Calendar** — connect it. → *"I prep your meetings, catch conflicts, block the slots you need."*
+3. **File / doc storage** — ask *"Where do you share files?"* (Google Drive, Dropbox, OneDrive, Notion…) and connect it. → *"I read the docs behind your decisions."*
+
+**C. Then the work-specific tools — this is where the value compounds.** Ask plainly:
+
+> **"What's your job, and which tools do you work in day to day?"**
+
+From the answer, name the concrete tools and guide them to connect **each** — e.g. a PM / eng → Linear / Jira / GitHub; sales → the CRM (Salesforce / HubSpot); a designer → Figma; support → the helpdesk (Zendesk / Intercom); ops → the spreadsheets / DB. **Push here:** the more work tools connected, the more of their *actual job* Auto-Jupi takes over — so for each tool they name, spell out the work that disappears once it's on.
+
+**For each tool:** read-only probe → if missing, give the payoff + guide the connect (OAuth / Connectors) → re-probe until ✅. Nothing here blocks setup (only Jupi, Step 2, does) — but **every skipped tool is value left on the table**, so don't let them skip lightly.
 
 ---
 

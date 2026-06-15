@@ -10,6 +10,7 @@ How an act-and-decide run executes, **autonomously in a routine**, with the vali
 
 ```
 1. PRODUCER (SKILL.md) ────► decision draft (Steps 0-3)
+1b. PLAIN-LANGUAGE PASS (SKILL.md) ─► rewrite the user-facing text plain & non-cryptic, before the gate
 2. VALIDATOR (reference/VALIDATOR.md) reads the draft + OPENS THE REAL SOURCES
       ├─ PASS              ──► DELIVER (final report.md)
       └─ RETURN (flags)    ──► back to the PRODUCER with the flags

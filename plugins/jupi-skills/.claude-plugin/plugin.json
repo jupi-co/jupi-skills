@@ -1,5 +1,6 @@
 {
   "name": "jupi-skills",
+  "version": "0.1.0",
   "description": "Decision skills backed by the Jupi MCP: search-decisions, log-decision, submit-decision.",
   "author": { "name": "Jupi", "email": "a@jupi.co" },
   "homepage": "https://github.com/jupi-co/jupi-skills",

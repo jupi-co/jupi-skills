@@ -1,11 +1,12 @@
 {
-  "$schema": "https://json.schemastore.org/claude-code-marketplace.json",
   "name": "jupi-skills",
   "owner": {
     "name": "Jupi",
     "email": "a@jupi.co"
   },
-  "description": "Agent Skills for capturing and surfacing team decisions with Jupi — search, log, and submit decisions from inside Claude Code, Cowork, and Cursor.",
+  "metadata": {
+    "description": "Agent Skills for capturing and surfacing team decisions with Jupi — search, log, and submit decisions from inside Claude Code, Cowork, and Cursor."
+  },
   "plugins": [
     {
       "name": "jupi-skills",
