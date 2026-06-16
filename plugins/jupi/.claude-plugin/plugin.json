@@ -1,0 +1,8 @@
+{
+  "name": "jupi",
+  "description": "Placeholder for the Jupi proactive decision engine (under development). Install jupi-staging to test the in-progress build from the staging branch.",
+  "author": { "name": "Jupi", "email": "a@jupi.co" },
+  "homepage": "https://github.com/jupi-co/jupi-skills",
+  "license": "MIT",
+  "keywords": ["jupi", "decisions", "placeholder"]
+}
