@@ -11,6 +11,16 @@
       "name": "jupi-skills",
       "source": "./plugins/jupi-skills",
       "description": "Decision skills backed by the Jupi MCP: search-decisions (find prior decisions), log-decision (record a settled call), submit-decision (hand an open call to a decider)."
+    },
+    {
+      "name": "jupi-skills-staging",
+      "source": {
+        "source": "git-subdir",
+        "url": "https://github.com/jupi-co/jupi-skills.git",
+        "path": "plugins/jupi-skills",
+        "ref": "staging"
+      },
+      "description": "STAGING — unreleased build of jupi-skills for pre-merge testing. Tracks the `staging` branch; not for production use."
     }
   ]
 }

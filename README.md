@@ -46,6 +46,20 @@ They also auto-trigger from natural phrasing — e.g. "have we decided X?" (sear
 
 > **Versioning:** none, by design. Consumers track `main` (the default branch); the effective version is its latest commit SHA. Every commit that lands on `main` is one clean update for everyone — no version bumps, no release bookkeeping. So keep `main` shippable.
 
+### Testing unreleased changes (`jupi-skills-staging`)
+
+The catalog also exposes a `jupi-skills-staging` plugin that tracks the
+`staging` branch instead of `main` — use it to try a change before it merges.
+
+Point `staging` at the branch you want to test, then install:
+
+    git branch -f staging origin/<pr-branch> && git push -f origin staging
+    /plugin install jupi-skills-staging@jupi-skills
+
+It installs under its own namespace (`/jupi-skills-staging:…`), so it runs
+alongside the production plugin. Refresh the plugin after each push to
+`staging`. The branch is disposable — don't develop on it.
+
 ### Auto-update
 
 Enable **per-marketplace auto-update** for `jupi-skills` in the `/plugin` interface. Because this repo is public, no token is needed — Claude Code pulls the latest at session start and reinstalls changed plugins. Without auto-update, refresh manually:
