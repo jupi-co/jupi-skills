@@ -60,6 +60,47 @@ It installs under its own namespace (`/jupi-skills-staging:…`), so it runs
 alongside the production plugin. Refresh the plugin after each push to
 `staging`. The branch is disposable — don't develop on it.
 
+### Local development: test a branch-specific build (zip upload)
+
+When you're developing a plugin (e.g. `jupi`) and want to try your **local,
+branch-specific** version in Cowork without pushing anything or touching
+`staging`, use the repo's packaging tooling. It rebuilds an uploadable
+`dist/<name>.zip` on every commit, which you then add through Cowork's
+**Local uploads**.
+
+One-time per clone — enable the git hook:
+
+```bash
+bash scripts/install-hooks.sh
+```
+
+Then the flow is:
+
+1. **Iterate** on your branch as usual.
+2. **Commit** your changes (a *local* commit is enough — no push needed). The
+   `post-commit` hook validates the plugin and regenerates `dist/jupi.zip`
+   (and `dist/jupi-skills.zip`) from the new `HEAD`.
+3. In **Claude Cowork → Customize → Plugins → Personal → Local uploads**, add
+   `dist/jupi.zip`. Walkthrough video: https://cleanshot.com/share/vyFr6Xrf
+
+The zip is a deterministic archive whose **root** contains
+`.claude-plugin/plugin.json` (plugin contents at the archive root, not nested
+under a folder) — the shape Cowork's uploader expects. Keep the `.zip`
+extension; the uploader rejects `.plugin` files even though the picker lists
+them.
+
+Handy commands (also driven by the `package-jupi-plugin` dev skill — just say
+"build the jupi zip"):
+
+```bash
+bash scripts/validate-plugin.sh        # manifest + no-XML-tags-in-description checks
+bash scripts/package-plugin.sh jupi    # build just dist/jupi.zip
+bash scripts/package-plugin.sh         # build every plugin under plugins/
+```
+
+`dist/` is gitignored — it's a build output, never committed. This tooling
+lives outside `plugins/`, so it's never shipped inside a plugin.
+
 ### Auto-update
 
 Enable **per-marketplace auto-update** for `jupi-skills` in the `/plugin` interface. Because this repo is public, no token is needed — Claude Code pulls the latest at session start and reinstalls changed plugins. Without auto-update, refresh manually:
