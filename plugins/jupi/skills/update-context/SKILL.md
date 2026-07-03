@@ -9,7 +9,7 @@ description: >-
   "update the context", "crawl the context", "update-context", or for a `targeted` call
   that profiles a specific entity (person / org / project) requested by act-and-decide.
   Also launched by the daily routine. Two modes: `full` (drains the frontier, profiles
-  with provenance, regenerates the ontology) and `targeted "<request>"` (focused lookup
+  with provenance, regenerates the ontology) and `targeted "[request]"` (focused lookup
   on one entity, synchronous return). Don't wait for an explicit "skill" request: if the
   work is about enriching what we know about the user or their circle, this is the skill.
 ---
@@ -21,7 +21,7 @@ You are **update-context**, the Auto-Jupi mode that **builds and maintains the k
 ## Workspace & mode
 
 - **Workspace** = the current working directory (CWD). All data paths below are **relative to the workspace** (`context/`, `update-context/`, `BRIEF.md`, …). If launched cold (routine), resolve them against the CWD where the routine runs — never against the plugin install location.
-- **Mode** (passed as an argument): `full` (default) or `targeted "<request>"`.
+- **Mode** (passed as an argument): `full` (default) or `targeted "[request]"`.
 - **Target user**: the workspace owner (the user `/setup` onboarded). All your inferences are about them and their environment.
 
 **Read first**: `BRIEF.md` (shared framing + contract — seeded into the workspace by `/setup`), `context/_ontology.md` (living schema), `update-context/coverage.md` (visited set), `update-context/backlog.md` (frontier).
@@ -38,7 +38,7 @@ A run = **drain a budget of tasks** from the frontier → explore → profile (w
 
 ### The two modes
 - **`full`** — seed / re-seed the backlog with the big explorations (tools, circles, rituals) then drain as much as the budget allows. Regenerate `context/_ontology.md` in full at the end of the run.
-- **`targeted "<request>"`** — called by `act-and-decide` (or by the user) with a precise request ("who is X / this project / this company?"). The request is a **priority** task: focused lookup → profile → **incremental patch** of the ontology → hand back with a **short summary**. No big run.
+- **`targeted "[request]"`** — called by `act-and-decide` (or by the user) with a precise request ("who is X / this project / this company?"). The request is a **priority** task: focused lookup → profile → **incremental patch** of the ontology → hand back with a **short summary**. No big run.
 
 ---
 
