@@ -11,11 +11,11 @@ Some questions aren't yours to close. The trade-off needs the eng lead's call; t
 
 The line between this and `log-decision`: log records a call _you've made_; submit opens a call _someone else makes_. This skill never finalizes — doing so would put words in the decider's mouth.
 
-## Tool you'll use
+## Tools you'll use
 
-`create-decision-tool` from the Jupi MCP server (may appear namespaced as `mcp__Jupi__…` or `mcp__claude_ai_Jupi__…`). There is intentionally **no** `finalize` step here.
+From the Jupi MCP server (may appear namespaced as `mcp__Jupi__…` or `mcp__claude_ai_Jupi__…`). There is intentionally **no** `finalize` step here.
 
-Inputs you'll pass:
+**`create-decision-tool`** — opens the decision. Inputs you'll pass:
 
 - `groupSlug` — the workspace.
 - `title` — the question, sharply stated.
@@ -25,6 +25,13 @@ Inputs you'll pass:
 - Omit `id` and `ownerId` — the server generates the id and sets you as owner.
 
 Returns `{ id, url, makerId, … }`.
+
+**`add-decision-options-tool`** — puts the alternatives the user talked about onto the decision board, exactly as if they'd been added by hand in the app. Inputs:
+
+- `groupSlug`, `decisionId` — the decision from the create step.
+- `options` — one entry per alternative: `{ title, description }`. `title` is plain text; `description` is **HTML** (the trade-offs of that path — `<p>`, `<ul>`/`<li>`, `<strong>`).
+
+Returns `{ options: [{ id, title }], url }`. Options land on the board attributed to you, ready for the decider to weigh, edit, and pick from.
 
 ## Getting the assignee's UUID (the one manual step)
 
@@ -52,22 +59,34 @@ If `workspace` is missing too, ask for it and offer to save. Never commit this f
 A good submission gives the decider everything they need and nothing they have to chase. Put this in `description`:
 
 - **Context** — what prompted the question, in a sentence or two.
-- **Options** — the alternatives you can see, if any, and their trade-offs.
 - **Your lean** — what you'd do and why, if you have a view. (A lean helps; it doesn't pre-empt — they still decide.)
 - **What's needed to decide** — the missing input, or what "done" looks like.
 
-**Format the `description` as HTML** — Jupi renders it as rich text, not Markdown. Use `<p>` for paragraphs, `<ul>`/`<li>` for the options, and `<strong>` for the labels (Context / Options / Lean / Needed). Don't send Markdown or bare newlines.
+The alternatives themselves do **not** go in the description — they become real options on the board (next section), where the decider can weigh, edit, and pick them. Prose options in a description are dead text; board options are the thing Jupi is built around.
+
+**Format the `description` as HTML** — Jupi renders it as rich text, not Markdown. Use `<p>` for paragraphs, `<ul>`/`<li>` for lists, and `<strong>` for the labels (Context / Lean / Needed). Don't send Markdown or bare newlines.
 
 A naked question ("Postgres or Dynamo?") wastes the decider's time and usually bounces back. Spend the extra two sentences.
+
+## The options (the board)
+
+Whatever alternatives surfaced in the discussion — the (a)/(b) the user weighed, the paths named in the doc — go on the board via `add-decision-options-tool`, one option per alternative:
+
+- `title` — the path, named plainly ("Async job with notification"), plain text.
+- `description` — that path's trade-offs, as HTML. A couple of `<li>` bullets (what it buys, what it costs) is the right size.
+
+Add them in one call right after creating the decision. If the user genuinely named no alternatives — a pure open question — skip this step rather than inventing options they never talked about; the decider can add their own.
 
 ## Workflow
 
 1. **Resolve the workspace** slug from `.claude/jupi.local.json` (prompt + offer to save if missing).
 2. **Resolve `makerId`** via the contacts flow above.
-3. **Write the framing** into a `description` (as HTML) covering context / options / lean / what's needed.
+3. **Write the framing** into a `description` (as HTML) covering context / lean / what's needed.
 4. **Create** the decision (owner + assignee only by default):
-   `create-decision-tool({ groupSlug, title, description, makerId, allowWorkspaceContributions: false })`.
-5. **Stop there — do not finalize.** Report back the decision `url` and who it's assigned to, and tell the user to share the link with that person (the decider opens it in Jupi to weigh in and close it).
+   `create-decision-tool({ groupSlug, title, description, makerId, allowWorkspaceContributions: false })`. Capture the returned `id`.
+5. **Add the options the user talked about** (skip only if none were named):
+   `add-decision-options-tool({ groupSlug, decisionId: <id>, options: [{ title, description }, …] })` — one entry per alternative, trade-offs in each option's HTML `description`.
+6. **Stop there — do not finalize.** Report back the decision `url` and who it's assigned to, and tell the user to share the link with that person (the decider opens it in Jupi to weigh in and close it).
 
 ## Example
 
@@ -80,18 +99,23 @@ A naked question ("Postgres or Dynamo?") wastes the decider's time and usually b
 - description (HTML):
   ```html
   <p><strong>Context:</strong> the new CSV export can take 30s+ for large workspaces, which blocks the request thread.</p>
-  <p><strong>Options:</strong></p>
-  <ul>
-    <li>(a) Keep it synchronous — simplest, but risks timeouts and ties up a worker.</li>
-    <li>(b) Move to an async job with a download-ready notification — more moving parts, needs the job queue.</li>
-  </ul>
-  <p><strong>My lean:</strong> (b) — we already run the queue for ingestion and the UX is better.</p>
-  <p><strong>Needed:</strong> your call on whether the added complexity is worth it now, or we ship (a) and revisit.</p>
+  <p><strong>My lean:</strong> the async job — we already run the queue for ingestion and the UX is better.</p>
+  <p><strong>Needed:</strong> your call on whether the added complexity is worth it now, or we ship synchronous and revisit.</p>
   ```
-- create (no finalize) → report URL + "assigned to Eng Lead; send them the link."
+- create, then put both paths on the board:
+  ```
+  add-decision-options-tool({ groupSlug, decisionId, options: [
+    { title: "Keep the export synchronous",
+      description: "<ul><li>Simplest — no new moving parts.</li><li>Risks timeouts and ties up a worker for 30s+.</li></ul>" },
+    { title: "Async job with a download-ready notification",
+      description: "<ul><li>No request-thread blocking; better UX for big exports.</li><li>More moving parts — needs the job queue.</li></ul>" }
+  ]})
+  ```
+- no finalize → report URL + "assigned to Eng Lead; send them the link."
 
 ## Guardrails
 
 - **Never finalize.** Finalization is the assignee's decision, full stop. If the user has actually already decided, you want `log-decision`, not this.
 - **No naked questions.** If the user hasn't given you enough to frame it, ask for the context before creating — an unframed decision just bounces back to them.
+- **Only the options the user actually talked about.** Put every alternative they named on the board; invent none. An empty board on a pure open question is honest — options you made up are not.
 - **One question per submission**, each assigned to its right decider — don't bundle unrelated calls into one decision.
