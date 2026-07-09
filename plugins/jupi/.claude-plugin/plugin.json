@@ -1,8 +1,9 @@
 {
   "name": "jupi",
-  "description": "Placeholder for the Jupi proactive decision engine (under development). Install jupi-staging to test the in-progress build from the staging branch.",
+  "version": "0.1.0",
+  "description": "Auto-Jupi — proactive decision engine. Maintains context on you and your work, turns incoming signals into ready-to-post Jupi decisions whose options each carry an executable action, and executes the decisions you've resolved. Includes setup to wire daily local routines.",
   "author": { "name": "Jupi", "email": "a@jupi.co" },
   "homepage": "https://github.com/jupi-co/jupi-skills",
   "license": "MIT",
-  "keywords": ["jupi", "decisions", "placeholder"]
+  "keywords": ["jupi", "decisions", "automation", "context", "mcp", "agent"]
 }
