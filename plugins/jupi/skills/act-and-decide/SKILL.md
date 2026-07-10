@@ -41,7 +41,7 @@ A run = **one single subject = one potential action**, handled in depth. You sta
 
 ## Constraints (hard — never transgress)
 - ✅ **Post decisions in Jupi.** At the end you **create** the decision in Jupi via `create-decision-tool`, **private by default** (`allowWorkspaceContributions: false`) — owner-only, no workspace notification (cf Step 3). Never `finalize` — the user settles it in Jupi.
-- ❌ **No other execution.** The options' actions (sending an email, creating a doc, a commit, a booking…) are **not** executed: they're written as Auto-jupi instructions and run later via the closing loop, once the user has settled. The *decision creation* is the only thing you execute.
+- ❌ **No other execution.** What you execute is **posting the decision well**: `create-decision-tool` **then** `add-decision-options-tool` (the options are created as **real Jupi options**). The options' **actions** (sending an email, creating a doc, a commit, a booking…) are **not** executed — they ride at the end of each option's description and run later via the closing loop, once the user has settled.
 - ❌ You **never** write in `context/`. To fill a gap, you **delegate** via a `targeted` call (cf Step 1).
 - ✅ Free reading of the tools. Writing in `act-and-decide/runs/`, `act-and-decide/patterns/`, `act-and-decide/decisions/` (your objects).
 
@@ -55,11 +55,12 @@ Before any hunt, handle the decisions **you have already created** (registry `ac
 1. **Read its status in Jupi** (`search-decisions-tool` / `get-decision` on the `jupi_decision_id`).
 2. If it is **closed** (the user has picked an option): **describe the action-instruction of the chosen option precisely** — the instruction is in the registry, the resolution (which option) comes from Jupi. *(For now: describe the execution; don't run it — executing the options' actions is a later step.)*
 3. **Recursion**: if that action requires a new trade-off → **create a new decision in Jupi** (add it to the registry), referencing the parent decision and the action that triggered it.
-4. Mark the decision `executed` in the registry.
+4. **Gated terminal actions**: a decomposed action carries a **terminal action** with `depends_on: [decision-ids]` (its prerequisite decisions). **Run it only once ALL its prerequisites are closed** — then **assemble the picked options** (the confirmed list, the chosen method…) into it and execute (draft-and-hold / send). If any prerequisite is still open, leave the terminal action pending.
+5. Mark the decision (or the terminal action) `executed` in the registry.
 
 Closed-but-unexecuted decisions are **the priority** (work already validated by the user). Once the pile is up to date, move to 0b.
 
-*(We now post decisions in Jupi, so the pile fills up over runs. Draining it = describing the chosen option's action — its real execution (sending, creating…) comes later.)*
+*(We now post decisions in Jupi, so the pile fills up over runs. Draining it = describing the chosen option's action — its real execution (sending, creating…) comes later, and a **gated terminal action waits until all its prerequisite decisions are closed**.)*
 
 ### Step 0b — Pick ONE new action (by looking in the tools)
 
@@ -74,6 +75,8 @@ It's **anything the user could do themselves on their computer**:
 
 Pick **the most relevant one** (strong signal, near deadline, real stakes). Note it as the **run's subject**.
 
+*(Tool gotcha — scan the user's **work** account explicitly: `list_events` defaults to a **personal** calendar, so pass the work `calendarId` (e.g. `n@jupi.co`). Same care for any tool with several accounts.)*
+
 **Before going further**: check `act-and-decide/patterns/_ruled-out.md`. If this situation is already ruled *"nothing to do"* there, move to another action.
 
 ### Step 1 — Gather the context of THIS action
@@ -83,17 +86,22 @@ Pick **the most relevant one** (strong signal, near deadline, real stakes). Note
 1. **Query the available context** — read `context/` (schema-on-read) for **every entity touched** by the subject: the Persons involved, the Org, the attached Goal/Project, the relevant Processes.
 2. **Ask for more (targeted)** — for **any unknown or fuzzy entity** (person, org, project, tool), **launch an `update-context` targeted sub-agent**: **invoke the `update-context` skill in targeted mode** (e.g. `/jupi:update-context targeted "<precise lookup request>"`) with the precise lookup instruction. It writes the file in `context/` and hands you back a summary. You don't write it yourself. *(Several gaps → several sub-agents in parallel.)*
 3. **Dig yourself in the tools** — and **never hesitate to do even more targeted lookups yourself** directly in the tools: the full thread, the linked tickets, the doc, the exchange history with the person, the adjacent Jupi decisions, who exactly this person / this company is (Gmail, web…). Go deep — good context makes a good decision.
-4. **Pull the messaging history before any message draft** — if the action will **send a message to a person** (email, Linear, DM, other), you **must** read the **most recent exchanges with that person in that same channel — at least the last 10 messages we sent them** (Gmail sent/thread history for email, Linear comment/message history for Linear, etc.). That history is the raw material for matching their voice when you draft (Step 3).
+4. **Pull the messaging history before any message draft** — if the action will **send a message to a person** (email, Linear, DM, other), you **must** read the **most recent exchanges with that person in that same channel — at least the last 10 messages we sent them** (Gmail sent/thread history for email, Linear comment/message history for Linear, etc.). That history is the raw material for matching their voice when you draft (Step 3). **Carve-out — inaccessible channel:** if the channel can't be read (WhatsApp, phone, SMS…), **skip this rule and flag it in the option's action** (match the person's general register instead) — don't block on it.
 
-### Step 2 — Derive the necessary decisions (0, 1, or several)
+### Step 2 — Derive the necessary decisions (decompose the blockers)
 
-Given the action and its context, identify **only the real trade-offs** the user must settle so we can execute the action.
+Given the action and its context, identify **everything that stands between you and executing it** — its **blockers** — and turn **each one into its own decision**. A blocker is any of:
+- a **real trade-off** (a non-trivial choice with stakes / that engages the user's preference — as before);
+- a **missing input only the user can confirm** (a fact, a list, a value) — e.g. *"who were the attendees?"*, *"which 2 use cases?"*;
+- a **method / tool / approval choice** — e.g. *"e-sign via Yousign, or sign by hand?"*.
+
+**One decision per blocker** (decompose — a single action often needs several). **Always find a way**: if you don't know *how* to do something, that's **not** a dead end — an option is *"ask X to do / enable it"* (we don't know how to e-sign → *"ask Claudia (ECAI) to send a Yousign"*). And **never surface an open question**: Jupi **researches and proposes the likely answer(s) as options**, the user just picks (info-gathering = *"Confirm the list: [A] / [B] / other"*).
 
 **How many decisions?**
-- **0 decisions** — if the action is **obvious** and the context is enough (a single reasonable way to do it): **we don't bother the user for nothing**. We **do the action** directly. *(V1: we describe precisely what we would have done — cf Step 3, case 0.)*
-- **1 or several decisions** — if there is one (or several) real trade-off(s): a non-trivial choice, with stakes, or that engages the user's preference / judgment. A single action may require several.
+- **0 (Case 0)** — only when the action is **fully determined**: no missing input, no method choice, one reasonable way. Then we **do it** directly (Step 3, case 0). *Now rare — most "just send it" tasks hide a missing input or a method choice, which becomes a decision.*
+- **1 or several** — one per blocker. They are the **prerequisites** of the action; the action itself becomes a **terminal action gated on them** (cf Step 3 & Step 0a).
 
-For each decision: **search-first** (`search-decisions-tool`, anti-duplicate), pick the **type** (1-5, cf `BRIEF.md` §4), identify **who is involved** (deciders + concerned).
+For each decision: **search-first** (`search-decisions-tool`, anti-duplicate), pick the **type** (1-5, cf `BRIEF.md` §4), identify **who is involved** (deciders + concerned). **Don't over-fragment**: decompose only for blockers that genuinely need the user (or that Jupi can't resolve itself) — the rest, Jupi just does.
 
 ### Step 3 — Output
 
@@ -105,22 +113,24 @@ For each decision: **search-first** (`search-decisions-tool`, anti-duplicate), p
 
 **Workspace** — read `groupSlug` from `.claude/jupi.local.json` (`{ "workspace": "<slug>" }`). If missing, ask the user once and offer to save it.
 
-**Create** — `create-decision-tool({ groupSlug, title, description, allowWorkspaceContributions: false })`:
+**Post = two calls (create the decision, then add its options).** First — `create-decision-tool({ groupSlug, title, description, allowWorkspaceContributions: false })`, where **`description` = the Context block only** (the options are NOT in the description — they're added by the second call, below):
 - **`allowWorkspaceContributions: false`** → **private, owner-only, no workspace notification**. This is Auto-jupi's default (these are the user's personal triage decisions). Pass `true` only if the user explicitly wants the whole workspace in. *(The flag only exists on an up-to-date MCP session — if a probe shows the server ignores it, stop and tell the user to reload the session before posting for real.)*
 - Omit `id` and `ownerId` (server generates the id, sets the caller as owner → also maker, so the user can finalize).
 - **Leave it STARTED — never `finalize`.** The user picks an option in Jupi.
-- Capture the returned `{ id, url }` and **record it in the `act-and-decide/decisions/` pile** (jupi_decision_id, url, title, the per-option Auto-jupi action-instructions) → that's what the closing loop (Step 0a) drains next run.
+- Capture `{ id, url }` from `create-decision-tool` **and the `{ id, title }` list returned by `add-decision-options-tool`**, and **record them in the `act-and-decide/decisions/` pile** (jupi_decision_id, url, title, and each **option id → its action-instruction**) → the closing loop (Step 0a) maps the option the user picked (its id, from Jupi) to the right action. **For a decomposed action**, also record the **terminal action** with `depends_on: [prerequisite decision-ids]` — the closing loop runs it only once all of them are closed.
+
+**Title — the question / subject, never the options.** The title states the **subject or the open question**, short and self-contained. **Never put the options in the title** — no *"X or Y?"*, no *"A vs B"*, no listing the choices (they live in the options). **No dash / hyphen as a separator** — no *`Subject — detail`*, no *`A — B`*; write one clean phrase or question (e.g. *"Comment on signe les 4 docs d'AG pour ECAI ?"*, not *"Signatures — Yousign ou à la main ?"*). An emoji prefix is fine; a hyphen inside a proper name (Anne-Claire) is fine.
 
 **Write `description` as HTML** (Jupi renders rich text, not Markdown — use `<p>`, `<ul>`/`<li>`, `<strong>`, `<em>`, `<a href>`, with `\n` between blocks). **Say "Jupi", never "Auto-jupi", anywhere in the posted content** — from the user's side it's *Jupi* that proposes and will act.
 
 **Breathe — this is the #1 format failure, get it right.** Jupi renders **consecutive `<p>` tags tight, with no gap** (verified live on a real decision), so "one `<p>` per sub-section" alone still reads as a wall of text. To put real air between the important blocks you **must insert an explicit spacer**:
 - **`<p>&nbsp;</p>` between sub-sections** → renders as a true blank line. Put one between each labelled sub-section.
-- **`<hr>` between major groups** → renders as a light divider with generous space (before the Options block, and optionally between Context and the run of options).
+- **`<hr>` between major groups** → renders as a light divider with generous space (e.g. a hard break between two Context sub-sections that deserve it).
 - **`<ul><li>`** for every action list.
 
 A bare stack of `<p>` with no `<p>&nbsp;</p>` spacers is exactly the wall-of-text the validator sends back.
 
-**Format gate — the validator RETURNs on any miss** (cf `reference/VALIDATOR.md`): (1) it **breathes** — a `<p>&nbsp;</p>` spacer between sub-sections (bare consecutive `<p>`s render tight in Jupi), never a wall of text; (2) each option's **description ends with an `Action:` `<ul><li>` list** (what Jupi will do), never folded into prose; (3) it says **"Jupi"**, never "Auto-jupi"; (4) **every artifact is an `<a href>` link**; (5) **near dates (≤10 days) read "in X days"**, longer ones the absolute date; (6) **each Action is maximally advanced** — dug from the real tools, hidden trade-offs surfaced as *« Jupi will create a decision to settle XXX »*.
+**Format gate — the validator RETURNs on any miss** (cf `reference/VALIDATOR.md`): (1) it **breathes** — a `<p>&nbsp;</p>` spacer between sub-sections (bare consecutive `<p>`s render tight in Jupi), never a wall of text; (2) each option's **description ends with an `Action:` `<ul><li>` list** (what Jupi will do), never folded into prose; (3) it says **"Jupi"**, never "Auto-jupi"; (4) **every artifact is an `<a href>` link**; (5) **near dates (≤10 days) read "in X days"**, longer ones the absolute date; (6) **each Action is maximally advanced** — dug from the real tools, hidden trade-offs surfaced as *« Jupi will create a decision to settle XXX »*; (7) the **title** is the question/subject only — **no options in it, no dash/hyphen separator**; (8) **no recommendation** — no option tagged *[reco]* / recommended, no steering, options stay neutral.
 
 Structure, in order:
 
@@ -128,34 +138,34 @@ Structure, in order:
 2. **If the decision is collective (type 3/4)** — near the top, a clear line:
    `<p><strong>Next step: add [Name], [Name] as contributors.</strong> &lt;one line: who &amp; why&gt;</p>`
    *(We can't invite contributors via the MCP yet — TECH-348 — so we flag it for the user to add them.)*
-3. **Options block — at the very end**, addressed to Jupi's decision agent so it turns them into real options:
+3. **Options — added as REAL Jupi options via a second call** (no longer text in the description, no "note to the decision agent"). Once `create-decision-tool` returns the `decisionId`, add them all in one call:
+
+`add-decision-options-tool({ groupSlug, decisionId, options: [ { title, description }, … ] })` — **1 to 20 options, one call.** Each becomes a real option, exactly as if the user had added it by hand on the board. *(If this tool isn't exposed in the session, **stop** and tell the user to reload the Jupi connection — never fall back to stuffing options into the description.)*
+
+   Each option object:
+   - **`title`** — plain text (≤200 chars), the option's title.
+   - **`description`** — **HTML**, same editor format and the **same breathing rules** as the decision description (`<p>`, `<strong>`, `<em>`, `<ul><li>`, `<a href>`, and `<p>&nbsp;</p>` spacers). It reads *why this option + consequences* (standalone), then **ends with the Action list** — the `<ul><li>` of what Jupi will do:
 
 ```html
-<hr>
-<p><strong>DESCRIPTION OF OPTIONS TO ADD TO THIS DECISION</strong></p>
-<p><em>Note to the Jupi decision agent: please add the following options to this decision, copy-pasting each one as-is. Each option is a title + a description, and the description ends with an Action list (what Jupi will do) — keep that Action list as part of the option's description.</em></p>
+<p>&lt;why this option + consequences, standalone&gt;</p>
 <p>&nbsp;</p>
-<p><strong>OPTION 1 — TITLE:</strong> &lt;option 1 title&gt;</p>
-<p><strong>OPTION 1 — DESCRIPTION:</strong> &lt;why this option + consequences, standalone&gt;</p>
 <p><strong>Action — what Jupi will do if this option is picked:</strong></p>
 <ul>
   <li>Jupi will &lt;precise action: recipient, content, location&gt;</li>
   <li>Jupi will &lt;next concrete action&gt;</li>
 </ul>
-<p>&nbsp;</p>
-<p><strong>OPTION 2 — TITLE:</strong> &lt;…&gt;</p>
-<p><strong>OPTION 2 — DESCRIPTION:</strong> &lt;…&gt;</p>
-<p><strong>Action — what Jupi will do if this option is picked:</strong></p>
-<ul><li>Jupi will &lt;…&gt;</li></ul>
-<!-- as many options as needed; a <p>&nbsp;</p> spacer between every option -->
 ```
+
+   Capture the returned option `{ id, title }` list → record each **option id → its action-instruction** in the pile (cf the record step above), so the closing loop can map the picked option to its action. **The returned IDs = success — do NOT re-read `savedOptions` to "verify" and retry**: a Yjs read-model lag can transiently show `savedOptions:[]` even though the options are there, and a retry would **duplicate** them.
 
 **Each option still obeys:**
 - **ACTION = a list of what Jupi will do** (the `Action:` list at the **end of the option's description**, rendered as `<ul><li>` — for now it rides inside the description; a structured Actions box will come later) — third person, precise (recipient, content, location); these are the instructions the closing loop runs once the user settles. E.g. *« Jupi will send the email to `alice@x.com` to confirm the Tue 2pm slot »* · *« Jupi will create the "Sharpist Brief" doc as a draft in the GTM project and share it with Paul »*. **Never "Auto-jupi"**; ban vague phrasings ("reply", "handle").
 - **Maximally advanced** — before writing each action, **go dig the real tools** to make it as concrete and as far-along as possible: the exact PR and what's failing in it, the exact doc to create and where, the exact thread to reply to. Don't write *"Jupi will fix the CI"* → say **what** breaks and **what** Jupi will do precisely. **Resolve the action's unknowns instead of deferring them**: if it hinges on a name, look it up (web/LinkedIn); if it's a meeting, pull candidate slots from the calendar; if it's an email, the list should already carry the drafted substance (the ask, the angle, the cc) — in the recipient's real voice and minimal (cf the Messaging rule above). A shallow *"Jupi will draft an email to X"* with nothing dug from the tools is exactly what the validator sends back.
-- **Recursion** — if an action needs a fresh trade-off, say it in the list: *« Jupi will create a decision to settle XXX »*.
+- **Recursion & unknowns — always find a way.** If an action needs a fresh trade-off, **a missing input, or a method you don't know**, don't stop — surface it in the list: *« Jupi will create a decision to settle XXX »*, or *« Jupi will ask [X] to enable / do it »* (we don't know how to e-sign → *« ask Claudia (ECAI) for a Yousign »*). A blocker becomes a sub-decision or an ask, **never a dead end**.
+- **Decomposed action — describe the whole thing, dependencies included.** When an action needs several decisions, each option's action still spells out **exactly what will happen**, naming its prerequisites and carrying the concrete output: *« Once decisions A, B & C are settled, Jupi will send the corresponding email: [the drafted email, written as if this option were the one chosen] »*. Draft the real output (email body, doc) **for this option now** — even though it fires later, never defer it to a vague "we'll write it then".
 - **Standalone** — reads on its own, in any order, **no reference to the others** (no *"like A but…"*, *"cheaper than B"*); express advantages/risks in absolute terms (*"cost ~0, on site"*).
 - **Absolute rule** — every option carries a concrete action; every decision unblocks at least one action, even a meta/repeatable one.
+- **No recommendation — options are neutral.** **Never** tag an option *[reco]* / *recommended* / *best*, and **don't steer** toward one — not in a title, not in a description, not by ordering. Jupi lays out the real options; **the user decides**.
 
 **Links — always, everywhere**: **any** doc, PR, ticket, thread, event or Jupi decision you mention is a **clickable native link** (the description's native link format — `<a href>`) — not only the signal and main sources, but **every artifact you name in the text**. (Gmail permalink, Linear issue/comment URL, GitHub PR URL, Drive link, Jupi decision URL.) If you write "the PR", "the doc", "the ticket" — it must be a link. *(Capture URLs in Step 1.)*
 
