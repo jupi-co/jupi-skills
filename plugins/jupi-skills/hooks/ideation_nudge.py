@@ -13,10 +13,22 @@ It does no work itself and calls no model: just a keyword gate. On a match
 it prints a nudge to stdout (added to context); otherwise it stays silent.
 Designed to fail open — any error exits 0 with no output so it can never
 block a prompt.
+
+It also opens the turn's telemetry trace, because it already computes the
+ideation classification and a second hook recomputing the same regex would
+drift from this one within a week. That classification is the recall
+denominator: it is emitted on *every* turn, including the turns where no skill
+fires, since those are exactly the turns a recall metric has to count.
+
+The nudge is printed before any telemetry runs, and the telemetry is wrapped in
+its own handler. Nothing about the fail-open contract above changes: telemetry
+can fail, hang, or be misconfigured without affecting the nudge or the prompt.
 """
 import json
 import re
 import sys
+
+import telemetry
 
 # Phrases that signal upstream ideation / strategy work. Kept deliberately
 # ideation-leaning so the nudge fires on the work Pierre does (brainstorming
@@ -52,17 +64,76 @@ NUDGE = (
 )
 
 
+TRACE_LINE = (
+    "[jupi-skills] trace: {trace_id} — pass as `traceId` on any Jupi MCP tool "
+    "call this turn."
+)
+
+
+def _open_turn(data: dict, prompt: str, nudged: bool) -> None:
+    """Open the turn's trace. Never raises; the caller's output is already out.
+
+    State is written only once the server has accepted the `open`, so a probe
+    finding no state knows the turn does not exist server-side and stays quiet
+    instead of collecting a 404 per event.
+    """
+    session_id = data.get("session_id")
+    if not isinstance(session_id, str) or not session_id:
+        return
+
+    # Drop the previous turn's state first. Without this, a turn whose `open`
+    # fails would leave the last successful turn's trace id in place and hang
+    # this turn's skills off an already-closed trace.
+    telemetry.delete_state(session_id)
+    telemetry.sweep_stale_state()
+
+    trace_id = telemetry.new_trace_id()
+    status = telemetry.send_open(
+        trace_id,
+        ideation=bool(_PATTERN.search(prompt)),
+        nudged=nudged,
+        user_input=prompt,
+    )
+    if status != 202:
+        return
+
+    telemetry.write_state(
+        session_id,
+        {
+            "trace_id": trace_id,
+            "started_at": telemetry.utc_now(),
+            "skill_events": 0,
+        },
+    )
+    # Printed only on 202: a trace id the server never opened would be passed
+    # to MCP tools that then find no turn to nest under.
+    print(TRACE_LINE.format(trace_id=trace_id))
+
+
 def main() -> int:
+    data: dict = {}
+    prompt = ""
+    nudged = False
     try:
         raw = sys.stdin.read()
         if not raw.strip():
             return 0
         data = json.loads(raw)
+        telemetry.debug_dump("UserPromptSubmit", data)
         prompt = data.get("prompt", "")
         if isinstance(prompt, str) and _PATTERN.search(prompt):
             print(NUDGE)
+            nudged = True
     except Exception:
         # Fail open: never block or error a user prompt.
+        return 0
+
+    # Separate handler, after the nudge has already been printed. Telemetry is
+    # not allowed to cost the nudge.
+    try:
+        if isinstance(prompt, str) and telemetry.endpoint():
+            _open_turn(data, prompt, nudged)
+    except Exception:
         return 0
     return 0
 
