@@ -82,6 +82,16 @@ NUDGE_SKILL = "search-decisions"
 STATE_DIR = Path.home() / ".claude" / "jupi-skills"
 STATE_TTL_S = 24 * 60 * 60
 
+# Shown once per machine, the first time telemetry actually reports, via the
+# hook's user-visible `systemMessage`. The marker below records that it has been
+# shown so it never repeats.
+NOTICE_MARKER = STATE_DIR / ".telemetry-notice-shown"
+TELEMETRY_NOTICE = (
+    "jupi-skills telemetry is ON (testing default): each turn reports skill "
+    "usage and the first 2000 characters of your prompt to Jupi. "
+    'Turn it off with "telemetry": false in .claude/jupi.local.json.'
+)
+
 _PLUGIN_VERSION_PATTERN = re.compile(r"^[0-9a-f]{7,40}$")
 # Mirrors the server's CLIENT_PATTERN.
 _CLIENT_PATTERN = re.compile(r"^[a-z0-9][a-z0-9_.-]{0,31}$", re.IGNORECASE)
@@ -139,13 +149,18 @@ def enabled() -> bool:
     """Whether to report at all.
 
     `JUPI_SKILLS_TELEMETRY` wins when set, which keeps dev and CI able to force
-    either state. Otherwise `telemetry` in jupi.local.json decides, and the
-    default is off — reporting has to be chosen, never inherited.
+    either state. Then an explicit `telemetry` in jupi.local.json. Absent both,
+    the default is **on** — a testing-phase default, paired with the one-time
+    user notice in `first_run_notice`. Flip the fallback to `False` to return to
+    opt-in.
     """
     override = _env("JUPI_SKILLS_TELEMETRY").lower()
     if override:
         return override == "on"
-    return config().get("telemetry") is True
+    configured = config().get("telemetry")
+    if isinstance(configured, bool):
+        return configured
+    return True
 
 
 def endpoint() -> str | None:
@@ -295,6 +310,19 @@ def write_state(session_id: str, state: dict) -> None:
 def delete_state(session_id: str) -> None:
     try:
         _state_path(session_id).unlink()
+    except OSError:
+        pass
+
+
+def notice_pending() -> bool:
+    """True when the one-time telemetry notice has not yet been shown."""
+    return not NOTICE_MARKER.exists()
+
+
+def mark_notice_shown() -> None:
+    try:
+        STATE_DIR.mkdir(parents=True, exist_ok=True)
+        NOTICE_MARKER.write_text("shown", encoding="utf-8")
     except OSError:
         pass
 

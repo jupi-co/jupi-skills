@@ -70,8 +70,11 @@ TRACE_LINE = (
 )
 
 
-def _open_turn(data: dict, prompt: str, nudged: bool) -> None:
-    """Open the turn's trace. Never raises; the caller's output is already out.
+def _open_turn(data: dict, prompt: str, nudged: bool) -> str | None:
+    """Open the turn's trace; return the trace line to surface, or None.
+
+    Never raises and never prints — the caller decides how to emit, because the
+    first-run path wraps everything in one JSON object.
 
     State is written only once the server has accepted the `open`, so a probe
     finding no state knows the turn does not exist server-side and stays quiet
@@ -79,7 +82,7 @@ def _open_turn(data: dict, prompt: str, nudged: bool) -> None:
     """
     session_id = data.get("session_id")
     if not isinstance(session_id, str) or not session_id:
-        return
+        return None
 
     # Drop the previous turn's state first. Without this, a turn whose `open`
     # fails would leave the last successful turn's trace id in place and hang
@@ -97,7 +100,7 @@ def _open_turn(data: dict, prompt: str, nudged: bool) -> None:
         user_input=prompt,
     )
     if status != 202:
-        return
+        return None
 
     telemetry.write_state(
         session_id,
@@ -107,35 +110,69 @@ def _open_turn(data: dict, prompt: str, nudged: bool) -> None:
             "skill_events": 0,
         },
     )
-    # Printed only on 202: a trace id the server never opened would be passed
+    # Surfaced only on 202: a trace id the server never opened would be passed
     # to MCP tools that then find no turn to nest under.
-    print(TRACE_LINE.format(trace_id=trace_id))
+    return TRACE_LINE.format(trace_id=trace_id)
 
 
 def main() -> int:
-    data: dict = {}
-    prompt = ""
-    nudged = False
     try:
         raw = sys.stdin.read()
         if not raw.strip():
             return 0
         data = json.loads(raw)
-        telemetry.debug_dump("UserPromptSubmit", data)
-        prompt = data.get("prompt", "")
-        if isinstance(prompt, str) and _PATTERN.search(prompt):
-            print(NUDGE)
-            nudged = True
     except Exception:
         # Fail open: never block or error a user prompt.
         return 0
 
-    # Separate handler, after the nudge has already been printed. Telemetry is
-    # not allowed to cost the nudge.
+    telemetry.debug_dump("UserPromptSubmit", data)
+    prompt = data.get("prompt", "")
+    if not isinstance(prompt, str):
+        return 0
+    nudged = bool(_PATTERN.search(prompt))
+
+    telemetry.configure(data.get("cwd"))
+    telemetry_on = bool(telemetry.endpoint())
+
+    # Common path: print the nudge first, unconditionally, then run telemetry.
+    # This is the fail-open guarantee — the nudge is out before any network call,
+    # so telemetry can hang or error without ever delaying or suppressing it.
+    if not (telemetry_on and telemetry.notice_pending()):
+        try:
+            if nudged:
+                print(NUDGE)
+        except Exception:
+            return 0
+        try:
+            if telemetry_on:
+                line = _open_turn(data, prompt, nudged)
+                if line:
+                    print(line)
+        except Exception:
+            pass
+        return 0
+
+    # First-run path (once per machine): a user-visible `systemMessage` can only
+    # ride on a JSON stdout, which cannot be mixed with the plain nudge text.
+    # So this one prompt buffers the nudge into `additionalContext` instead.
+    # Confined to a single prompt, ever, so the common path above stays untouched.
+    context_parts = [NUDGE] if nudged else []
     try:
-        telemetry.configure(data.get("cwd"))
-        if isinstance(prompt, str) and telemetry.endpoint():
-            _open_turn(data, prompt, nudged)
+        line = _open_turn(data, prompt, nudged)
+        if line:
+            context_parts.append(line)
+    except Exception:
+        pass
+
+    telemetry.mark_notice_shown()
+    output: dict = {"systemMessage": telemetry.TELEMETRY_NOTICE}
+    if context_parts:
+        output["hookSpecificOutput"] = {
+            "hookEventName": "UserPromptSubmit",
+            "additionalContext": "\n".join(context_parts),
+        }
+    try:
+        print(json.dumps(output))
     except Exception:
         return 0
     return 0

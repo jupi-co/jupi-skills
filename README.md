@@ -140,17 +140,19 @@ If the file is missing, the skills just ask for the slug and offer to save it �
 
 A user-level `~/.claude/jupi.local.json` is merged with the project file, project winning — so you can set something once and override it per repo.
 
-### Optional: usage telemetry
+### Usage telemetry
 
-Off unless you turn it on. Add `"telemetry": true` to the config above and the plugin reports the shape of each turn to Jupi, so we can see when the decision skills fire — and, more usefully, when one should have fired and didn't.
+> **On by default during the current testing phase.** The first time it reports, you'll see a one-time notice in the terminal. To turn it off, add `"telemetry": false` to the config above.
 
-**What is sent, per turn:** a random trace id, the plugin version, which surface you're on, timestamps, whether the prompt looked like ideation work, which of the three decision skills fired, and **the first 2000 characters of your prompt**.
+The plugin reports the shape of each turn to Jupi, so we can see when the decision skills fire — and, more usefully, when one should have fired and didn't.
+
+**What is sent, per turn:** a random trace id, a hashed conversation id, the plugin version, which surface you're on, timestamps, whether the prompt looked like ideation work, which of the three decision skills fired, and **the first 2000 characters of your prompt**.
 
 **What is never sent:** file paths, file contents, tool arguments, tool results, Claude's replies, or the rest of the conversation.
 
-That prompt text is the part worth a deliberate decision. It is broader than what Jupi already receives — the skills record decisions you *chose* to log, whereas this captures the opening of every turn while the plugin is loaded, including turns that have nothing to do with decisions. It is why this defaults to off.
+That prompt text is the part worth knowing about. It is broader than what Jupi already receives — the skills record decisions you *chose* to log, whereas this captures the opening of every turn while the plugin is loaded, including turns that have nothing to do with decisions.
 
-Set `"telemetry": false`, or remove the key, to stop it. `JUPI_SKILLS_TELEMETRY=off` overrides the config for a single session.
+**To turn it off:** set `"telemetry": false` in `.claude/jupi.local.json` (or the user-level `~/.claude/jupi.local.json`). `JUPI_SKILLS_TELEMETRY=off` overrides for a single session.
 
 ---
 

@@ -116,7 +116,18 @@ def main() -> int:
     plugin_root = Path(tempfile.mkdtemp()) / VERSION_SHA
     plugin_root.mkdir(parents=True)
 
+    # Isolate HOME so the suite never touches the real ~/.claude/jupi-skills —
+    # state files and the one-time notice marker all live under here.
+    test_home = tempfile.mkdtemp()
+    # Pre-mark the notice as shown so ordinary scenarios get plain-text output;
+    # the dedicated first-run scenario clears it to exercise the systemMessage.
+    marker_dir = Path(test_home) / ".claude" / "jupi-skills"
+    marker_dir.mkdir(parents=True)
+    marker = marker_dir / ".telemetry-notice-shown"
+    marker.write_text("shown")
+
     on = {
+        "HOME": test_home,
         "JUPI_SKILLS_TELEMETRY": "on",
         "JUPI_TELEMETRY_URL": url,
         "CLAUDE_PLUGIN_ROOT": str(plugin_root),
@@ -256,6 +267,7 @@ def main() -> int:
         json.dumps({"workspace": "demo", "telemetry": True, "telemetry_url": url})
     )
     via_config = {
+        "HOME": test_home,
         "CLAUDE_PLUGIN_ROOT": str(plugin_root),
         "CLAUDE_CODE_ENTRYPOINT": "cowork",
         "JUPI_SKILLS_TELEMETRY": "",     # unset: the config file decides
@@ -270,17 +282,61 @@ def main() -> int:
     check("client from entrypoint", Stub.received[0]["client"] == "cowork")
     check("trace line prints", "trace:" in out)
 
-    print("\nno config, no env — silent by default")
+    print("\nno config, no env — ON by default (testing default)")
     Stub.received.clear()
     bare = Path(tempfile.mkdtemp())
+    # URL points at the stub, not the compiled-in production default, so the
+    # default-on path is exercised without any real traffic.
+    default_on = {**via_config, "JUPI_TELEMETRY_URL": url}
     out, _ = run_hook(
         "ideation_nudge.py",
         {**prompt, "session_id": "bare-1", "cwd": str(bare)},
-        via_config,
+        default_on,
+    )
+    check("nudge still prints", "This prompt looks like" in out)
+    check("open sent with no config at all", len(Stub.received) == 1)
+    check("trace line prints", "trace:" in out)
+
+    print("\ntelemetry: false disables it explicitly")
+    Stub.received.clear()
+    off_project = Path(tempfile.mkdtemp())
+    (off_project / ".claude").mkdir()
+    (off_project / ".claude" / "jupi.local.json").write_text(
+        json.dumps({"workspace": "demo", "telemetry": False, "telemetry_url": url})
+    )
+    out, _ = run_hook(
+        "ideation_nudge.py",
+        {**prompt, "session_id": "off-1", "cwd": str(off_project)},
+        default_on,
     )
     check("nudge still prints", "This prompt looks like" in out)
     check("nothing sent", not Stub.received)
     check("no trace line", "trace:" not in out)
+
+    print("\nfirst-run notice: systemMessage, once")
+    Stub.received.clear()
+    fresh_home = tempfile.mkdtemp()          # no notice marker yet
+    notice_env = {**on, "HOME": fresh_home}
+    out, _ = run_hook(
+        "ideation_nudge.py",
+        {**prompt, "session_id": "notice-1"},
+        notice_env,
+    )
+    payload = json.loads(out)                 # first run must be JSON
+    check("systemMessage present on first run",
+          "telemetry is ON" in payload.get("systemMessage", ""))
+    check("nudge carried in additionalContext",
+          "This prompt looks like"
+          in payload.get("hookSpecificOutput", {}).get("additionalContext", ""))
+    check("open still sent on the notice turn",
+          any(e["event"] == "open" for e in Stub.received))
+    out2, _ = run_hook(
+        "ideation_nudge.py",
+        {**prompt, "session_id": "notice-2"},
+        notice_env,
+    )
+    check("second run is plain text, no systemMessage",
+          "systemMessage" not in out2 and "This prompt looks like" in out2)
 
     print("\ndefault endpoint (checked in-process, never posted to)")
     sys.path.insert(0, str(HOOKS))
