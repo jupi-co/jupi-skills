@@ -123,8 +123,10 @@ def main() -> int:
         "CLAUDE_CODE_ENTRYPOINT": "claude-desktop",
         "JUPI_TELEMETRY_CLIENT": "",
     }
-    off = {k: v for k, v in on.items() if k != "JUPI_SKILLS_TELEMETRY"}
-    off["JUPI_SKILLS_TELEMETRY"] = ""
+    # Explicitly "off", never empty. An empty value falls through to
+    # jupi.local.json, and with a default endpoint compiled in, a stray config
+    # file would send this test's traffic to production.
+    off = {**on, "JUPI_SKILLS_TELEMETRY": "off"}
 
     prompt = {"session_id": SESSION, "prompt": "let's brainstorm the pricing tiers"}
     plain = {"session_id": SESSION, "prompt": "what does this function do"}
@@ -225,6 +227,53 @@ def main() -> int:
     check("plugin_version omitted, not faked",
           "plugin_version" not in Stub.received[0])
     check("trace line still prints", "trace:" in out)
+
+    print("\nenabled by jupi.local.json, no env vars")
+    Stub.received.clear()
+    project = Path(tempfile.mkdtemp())
+    (project / ".claude").mkdir()
+    (project / ".claude" / "jupi.local.json").write_text(
+        json.dumps({"workspace": "demo", "telemetry": True, "telemetry_url": url})
+    )
+    via_config = {
+        "CLAUDE_PLUGIN_ROOT": str(plugin_root),
+        "CLAUDE_CODE_ENTRYPOINT": "cowork",
+        "JUPI_SKILLS_TELEMETRY": "",     # unset: the config file decides
+        "JUPI_TELEMETRY_URL": "",
+    }
+    out, _ = run_hook(
+        "ideation_nudge.py",
+        {**prompt, "session_id": "cfg-1", "cwd": str(project)},
+        via_config,
+    )
+    check("config file enables telemetry", len(Stub.received) == 1)
+    check("client from entrypoint", Stub.received[0]["client"] == "cowork")
+    check("trace line prints", "trace:" in out)
+
+    print("\nno config, no env — silent by default")
+    Stub.received.clear()
+    bare = Path(tempfile.mkdtemp())
+    out, _ = run_hook(
+        "ideation_nudge.py",
+        {**prompt, "session_id": "bare-1", "cwd": str(bare)},
+        via_config,
+    )
+    check("nudge still prints", "This prompt looks like" in out)
+    check("nothing sent", not Stub.received)
+    check("no trace line", "trace:" not in out)
+
+    print("\ndefault endpoint (checked in-process, never posted to)")
+    sys.path.insert(0, str(HOOKS))
+    import telemetry as t
+    check("default is the Jupi api host",
+          t.DEFAULT_ENDPOINT == "https://apis.jupi.co")
+    os.environ["JUPI_SKILLS_TELEMETRY"] = "on"
+    os.environ.pop("JUPI_TELEMETRY_URL", None)
+    t.configure(str(bare))
+    check("used when nothing overrides it", t.endpoint() == "https://apis.jupi.co")
+    os.environ["JUPI_SKILLS_TELEMETRY"] = "off"
+    check("gate still wins over the default", t.endpoint() is None)
+    os.environ.pop("JUPI_SKILLS_TELEMETRY")
 
     print("\nlong prompt")
     Stub.received.clear()

@@ -44,6 +44,7 @@ def main() -> int:
             return 0
         data = json.loads(raw)
         telemetry.debug_dump("Stop", data)
+        telemetry.configure(data.get("cwd"))
 
         if not telemetry.endpoint():
             return 0

@@ -163,13 +163,40 @@ send `completed`.
 
 ### 4.1 Configuration
 
-| Variable | Required | Meaning |
-|---|---|---|
-| `JUPI_SKILLS_TELEMETRY` | yes | `on` enables. Anything else, including unset, disables. |
-| `JUPI_TELEMETRY_URL` | yes | Base URL. No default ships in the plugin. |
+Primary source is `.claude/jupi.local.json` — the file the skills already read
+for `workspace` and `contacts`. Environment variables are the wrong mechanism as
+the only option: Cowork and the desktop app have no shell profile to set them in.
 
-Both must be present or every hook is a no-op. A plugin that phones home to a
-baked-in address on install is not something we ship.
+```json
+{
+  "workspace": "your-group-slug",
+  "telemetry": true
+}
+```
+
+User-level (`~/.claude/jupi.local.json`) and project-level files are **merged**,
+project winning, so telemetry can be enabled once and overridden off for a
+single repo.
+
+| Source | Purpose |
+|---|---|
+| `telemetry: true` in config | The gate. Default off — reporting is chosen, never inherited. |
+| `telemetry_url` in config | Optional endpoint override. |
+| `JUPI_SKILLS_TELEMETRY` | `on`/`off`. Wins over config when set, so dev and CI can force either state. |
+| `JUPI_TELEMETRY_URL` | Endpoint override, wins over config. |
+
+The endpoint defaults to `https://apis.jupi.co` — the same host the plugin's MCP
+server already points at.
+
+Shipping the URL is deliberate: **the gate is the opt-in switch, not the
+obscurity of the address.** Someone who installed a Jupi plugin and signed in to
+Jupi is not surprised by Jupi's own endpoint, and making them retype an API URL
+only invites typos into a path that fails silently.
+
+One consequence for tests and scripts: with a default compiled in, leaving
+`JUPI_SKILLS_TELEMETRY` *empty* falls through to the config file, and a stray
+`telemetry: true` would send traffic to production. Set it to `off` explicitly
+rather than blank.
 
 ### 4.2 Turn state
 

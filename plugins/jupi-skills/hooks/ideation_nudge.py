@@ -131,6 +131,7 @@ def main() -> int:
     # Separate handler, after the nudge has already been printed. Telemetry is
     # not allowed to cost the nudge.
     try:
+        telemetry.configure(data.get("cwd"))
         if isinstance(prompt, str) and telemetry.endpoint():
             _open_turn(data, prompt, nudged)
     except Exception:

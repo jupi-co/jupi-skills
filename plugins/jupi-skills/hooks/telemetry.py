@@ -45,6 +45,18 @@ PROTOCOL_VERSION = 1
 ROUTE = "/v1/skill-traces"
 TIMEOUT_S = 2.0
 
+# Matches the host the plugin's MCP server already points at. Shipping the
+# endpoint is fine — the gate is the opt-in switch, not the obscurity of the
+# URL. Someone who installed a Jupi plugin and signed in to Jupi is not
+# surprised by Jupi's own address, and making them retype an API URL only
+# invites typos into a path that fails silently.
+DEFAULT_ENDPOINT = "https://apis.jupi.co"
+
+# Read from `.claude/jupi.local.json`, the file the skills already use for
+# `workspace` and `contacts`. Environment variables are the wrong mechanism
+# here: Cowork and the desktop app have no shell profile to set them in.
+CONFIG_RELATIVE_PATH = Path(".claude") / "jupi.local.json"
+
 # Server truncates too, but its 8 KB cap is enforced on the wire bytes — a long
 # prompt would be refused with 413 before that truncation ever ran.
 USER_INPUT_MAX = 2000
@@ -73,16 +85,70 @@ def _env(name: str) -> str:
     return (os.environ.get(name) or "").strip()
 
 
-def endpoint() -> str | None:
-    """Base URL, or None when telemetry is off or unconfigured.
+_cwd: str | None = None
+_config_cache: dict | None = None
 
-    Both the switch and the URL are required. No default endpoint ships in the
-    plugin: an installed plugin must not phone home to a baked-in address.
+
+def configure(cwd: str | None) -> None:
+    """Record the turn's working directory so the project config can be found.
+
+    Called once by each hook with the `cwd` from its payload. Every hook is a
+    fresh process, so module state is per-invocation and safe.
     """
-    if _env("JUPI_SKILLS_TELEMETRY").lower() != "on":
+    global _cwd, _config_cache
+    _cwd = cwd if isinstance(cwd, str) and cwd else None
+    _config_cache = None
+
+
+def _read_json(path: Path) -> dict:
+    try:
+        with path.open(encoding="utf-8") as handle:
+            data = json.load(handle)
+        return data if isinstance(data, dict) else {}
+    except (OSError, ValueError):
+        return {}
+
+
+def config() -> dict:
+    """Merged jupi.local.json — user-level first, project overriding it.
+
+    Merged rather than first-match so `telemetry` can be turned on once at the
+    user level and still be overridden off for a single project.
+    """
+    global _config_cache
+    if _config_cache is not None:
+        return _config_cache
+
+    merged = _read_json(Path.home() / CONFIG_RELATIVE_PATH)
+    if _cwd:
+        merged.update(_read_json(Path(_cwd) / CONFIG_RELATIVE_PATH))
+    _config_cache = merged
+    return merged
+
+
+def enabled() -> bool:
+    """Whether to report at all.
+
+    `JUPI_SKILLS_TELEMETRY` wins when set, which keeps dev and CI able to force
+    either state. Otherwise `telemetry` in jupi.local.json decides, and the
+    default is off — reporting has to be chosen, never inherited.
+    """
+    override = _env("JUPI_SKILLS_TELEMETRY").lower()
+    if override:
+        return override == "on"
+    return config().get("telemetry") is True
+
+
+def endpoint() -> str | None:
+    """Base URL, or None when telemetry is off."""
+    if not enabled():
         return None
-    url = _env("JUPI_TELEMETRY_URL").rstrip("/")
-    return url or None
+    url = (
+        _env("JUPI_TELEMETRY_URL")
+        or str(config().get("telemetry_url") or "")
+        or DEFAULT_ENDPOINT
+    )
+    return url.rstrip("/") or None
 
 
 def plugin_version() -> str | None:
