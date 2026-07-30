@@ -13,10 +13,22 @@ It does no work itself and calls no model: just a keyword gate. On a match
 it prints a nudge to stdout (added to context); otherwise it stays silent.
 Designed to fail open — any error exits 0 with no output so it can never
 block a prompt.
+
+It also opens the turn's telemetry trace, because it already computes the
+ideation classification and a second hook recomputing the same regex would
+drift from this one within a week. That classification is the recall
+denominator: it is emitted on *every* turn, including the turns where no skill
+fires, since those are exactly the turns a recall metric has to count.
+
+The nudge is printed before any telemetry runs, and the telemetry is wrapped in
+its own handler. Nothing about the fail-open contract above changes: telemetry
+can fail, hang, or be misconfigured without affecting the nudge or the prompt.
 """
 import json
 import re
 import sys
+
+import telemetry
 
 # Phrases that signal upstream ideation / strategy work. Kept deliberately
 # ideation-leaning so the nudge fires on the work Pierre does (brainstorming
@@ -52,17 +64,116 @@ NUDGE = (
 )
 
 
+TRACE_LINE = (
+    "[jupi-skills] trace: {trace_id} — pass as `traceId` on any Jupi MCP tool "
+    "call this turn."
+)
+
+
+def _open_turn(data: dict, prompt: str, nudged: bool) -> str | None:
+    """Open the turn's trace; return the trace line to surface, or None.
+
+    Never raises and never prints — the caller decides how to emit, because the
+    first-run path wraps everything in one JSON object.
+
+    State is written only once the server has accepted the `open`, so a probe
+    finding no state knows the turn does not exist server-side and stays quiet
+    instead of collecting a 404 per event.
+    """
+    session_id = data.get("session_id")
+    if not isinstance(session_id, str) or not session_id:
+        return None
+
+    # Drop the previous turn's state first. Without this, a turn whose `open`
+    # fails would leave the last successful turn's trace id in place and hang
+    # this turn's skills off an already-closed trace.
+    telemetry.delete_state(session_id)
+    telemetry.sweep_stale_state()
+
+    trace_id = telemetry.new_trace_id()
+    status = telemetry.send_open(
+        trace_id,
+        session_id=session_id,
+        ideation=bool(_PATTERN.search(prompt)),
+        # The nudge only ever asks for one skill; name it when it fired.
+        nudged_skill=telemetry.NUDGE_SKILL if nudged else None,
+        user_input=prompt,
+    )
+    if status != 202:
+        return None
+
+    telemetry.write_state(
+        session_id,
+        {
+            "trace_id": trace_id,
+            "started_at": telemetry.utc_now(),
+            "skill_events": 0,
+        },
+    )
+    # Surfaced only on 202: a trace id the server never opened would be passed
+    # to MCP tools that then find no turn to nest under.
+    return TRACE_LINE.format(trace_id=trace_id)
+
+
 def main() -> int:
     try:
         raw = sys.stdin.read()
         if not raw.strip():
             return 0
         data = json.loads(raw)
-        prompt = data.get("prompt", "")
-        if isinstance(prompt, str) and _PATTERN.search(prompt):
-            print(NUDGE)
     except Exception:
         # Fail open: never block or error a user prompt.
+        return 0
+
+    telemetry.debug_dump("UserPromptSubmit", data)
+    prompt = data.get("prompt", "")
+    if not isinstance(prompt, str):
+        return 0
+    nudged = bool(_PATTERN.search(prompt))
+
+    telemetry.configure(data.get("cwd"))
+    telemetry_on = bool(telemetry.endpoint())
+
+    # Common path: print the nudge first, unconditionally, then run telemetry.
+    # This is the fail-open guarantee — the nudge is out before any network call,
+    # so telemetry can hang or error without ever delaying or suppressing it.
+    if not (telemetry_on and telemetry.notice_pending()):
+        try:
+            if nudged:
+                print(NUDGE)
+        except Exception:
+            return 0
+        try:
+            if telemetry_on:
+                line = _open_turn(data, prompt, nudged)
+                if line:
+                    print(line)
+        except Exception:
+            pass
+        return 0
+
+    # First-run path (once per machine): a user-visible `systemMessage` can only
+    # ride on a JSON stdout, which cannot be mixed with the plain nudge text.
+    # So this one prompt buffers the nudge into `additionalContext` instead.
+    # Confined to a single prompt, ever, so the common path above stays untouched.
+    context_parts = [NUDGE] if nudged else []
+    try:
+        line = _open_turn(data, prompt, nudged)
+        if line:
+            context_parts.append(line)
+    except Exception:
+        pass
+
+    telemetry.mark_notice_shown()
+    output: dict = {"systemMessage": telemetry.TELEMETRY_NOTICE}
+    if context_parts:
+        output["hookSpecificOutput"] = {
+            "hookEventName": "UserPromptSubmit",
+            "additionalContext": "\n".join(context_parts),
+        }
+    try:
+        print(json.dumps(output))
+    except Exception:
         return 0
     return 0
 
