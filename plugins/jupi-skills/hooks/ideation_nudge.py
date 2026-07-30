@@ -92,7 +92,8 @@ def _open_turn(data: dict, prompt: str, nudged: bool) -> None:
         trace_id,
         session_id=session_id,
         ideation=bool(_PATTERN.search(prompt)),
-        nudged=nudged,
+        # The nudge only ever asks for one skill; name it when it fired.
+        nudged_skill=telemetry.NUDGE_SKILL if nudged else None,
         user_input=prompt,
     )
     if status != 202:

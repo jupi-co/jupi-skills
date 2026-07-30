@@ -68,6 +68,15 @@ MAX_SKILL_EVENTS = 20
 TRACKED_SKILLS = frozenset({"search-decisions", "log-decision", "submit-decision"})
 OUTCOMES = frozenset({"completed", "interrupted", "error"})
 
+# Reported on every `open` so the server can slice by plugin; a second plugin
+# would send its own name and be counted separately with no backend change.
+PLUGIN_NAME = "jupi-skills"
+
+# The skill the ideation nudge asks the model to consult. Sent as `nudged_skill`
+# so the server knows which skill firing counts as the nudge converting — a
+# nudge for this one is not converted by a different skill firing instead.
+NUDGE_SKILL = "search-decisions"
+
 # `abandoned` and `evicted` are server-side outcomes. Never send them.
 
 STATE_DIR = Path.home() / ".claude" / "jupi-skills"
@@ -364,7 +373,7 @@ def send_open(
     *,
     session_id: str,
     ideation: bool,
-    nudged: bool,
+    nudged_skill: str | None,
     user_input: str | None,
 ) -> int | None:
     payload = {
@@ -372,11 +381,16 @@ def send_open(
         "event": "open",
         "trace_id": trace_id,
         "session_hash": session_hash(session_id),
+        "plugin": PLUGIN_NAME,
         "client": client_name(),
         "started_at": utc_now(),
         "ideation": ideation,
-        "nudged": nudged,
     }
+    # Present only when the nudge fired; absent means no nudge. Names the skill
+    # asked for, not a bare flag, so the server can tell a real conversion from
+    # some other skill happening to fire.
+    if nudged_skill:
+        payload["nudged_skill"] = nudged_skill
     # Omitted rather than faked when the build sha is unresolvable — the field
     # is optional server-side so a dev install is still counted.
     version = plugin_version()

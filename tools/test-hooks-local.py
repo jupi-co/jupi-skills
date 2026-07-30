@@ -31,8 +31,8 @@ SESSION = "test-session-0001"
 VERSION_SHA = "489e80e"
 
 ALLOWED = {
-    "open": {"v", "event", "trace_id", "session_hash", "plugin_version",
-             "client", "started_at", "ideation", "nudged", "user_input"},
+    "open": {"v", "event", "trace_id", "session_hash", "plugin", "plugin_version",
+             "client", "started_at", "ideation", "nudged_skill", "user_input"},
     "skill": {"v", "event", "trace_id", "skill", "at"},
     "close": {"v", "event", "trace_id", "ended_at", "duration_ms", "outcome"},
 }
@@ -151,7 +151,9 @@ def main() -> int:
     opened = Stub.received[0]
     check("event is open", opened["event"] == "open")
     check("ideation true", opened["ideation"] is True)
-    check("nudged true", opened["nudged"] is True)
+    check("nudged_skill names search-decisions",
+          opened.get("nudged_skill") == "search-decisions")
+    check("plugin is jupi-skills", opened.get("plugin") == "jupi-skills")
     check("no install_id", "install_id" not in opened)
     check("plugin_version is the sha", opened["plugin_version"] == VERSION_SHA)
     check("client read from the entrypoint", opened["client"] == "claude-desktop")
@@ -192,7 +194,7 @@ def main() -> int:
     check("no nudge", "This prompt looks like" not in out)
     check("open still sent", len(Stub.received) == 1)
     check("ideation false", Stub.received[0]["ideation"] is False)
-    check("nudged false", Stub.received[0]["nudged"] is False)
+    check("nudged_skill absent when no nudge", "nudged_skill" not in Stub.received[0])
     run_hook("close_probe.py", {"session_id": SESSION}, on)
     check("close still sent", Stub.received[-1]["event"] == "close")
 
