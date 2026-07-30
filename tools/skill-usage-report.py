@@ -102,9 +102,24 @@ def load_ideation_pattern(repo_root: Path) -> re.Pattern:
     if not hook.exists():
         sys.exit(f"error: cannot find the nudge hook at {hook}\n"
                  "Run this from the jupi-skills repo, or pass --hook <path>.")
+    return _load_pattern_from(hook)
+
+
+def _load_pattern_from(hook: Path) -> re.Pattern:
+    """Exec the hook module and hand back its compiled regex.
+
+    The hook's directory has to go on `sys.path` first: it imports its sibling
+    `telemetry` module, which resolves for free when Claude Code runs the hook
+    as a script (the script's directory becomes `sys.path[0]`) but not when it
+    is imported from here.
+
+    Importing is still side-effect free — both modules only define things at
+    import time, and nothing reads config or opens a socket until called.
+    """
+    if str(hook.parent) not in sys.path:
+        sys.path.insert(0, str(hook.parent))
     spec = importlib.util.spec_from_file_location("ideation_nudge", hook)
     module = importlib.util.module_from_spec(spec)
-    # The hook's module body only compiles a regex; importing it is side-effect free.
     spec.loader.exec_module(module)
     return module._PATTERN
 
@@ -389,7 +404,15 @@ def print_report(r: dict, samples: int) -> None:
             print(f"  {count:4}  {name}")
     else:
         print("     0  (no tracked skills fired)")
-    print(f"  {r['nudge']['prompts_with_nudge']:4}  prompts carrying the ideation nudge")
+    nudged = r["nudge"]["prompts_with_nudge"]
+    if nudged:
+        print(f"  {nudged:4}  prompts carrying the ideation nudge")
+    else:
+        # Not a finding. UserPromptSubmit hook output is injected into the
+        # model's context but is not written into the transcript this reads, so
+        # a zero here means "cannot tell", not "the nudge never fired". Printing
+        # it as 0 alongside real counts reads as evidence and is not.
+        print("   n/a  nudge presence is not recoverable from transcripts")
     if r["orphan_skill_fires"]:
         print(f"  {r['orphan_skill_fires']:4}  fires with no attributable prompt (subagent//resumed)")
 
@@ -428,13 +451,10 @@ def main() -> int:
     args = ap.parse_args()
 
     repo_root = Path(__file__).resolve().parent.parent
-    if args.hook:
-        spec = importlib.util.spec_from_file_location("ideation_nudge", args.hook)
-        module = importlib.util.module_from_spec(spec)
-        spec.loader.exec_module(module)
-        pattern = module._PATTERN
-    else:
-        pattern = load_ideation_pattern(repo_root)
+    pattern = (
+        _load_pattern_from(args.hook) if args.hook
+        else load_ideation_pattern(repo_root)
+    )
 
     since = None
     if args.since:

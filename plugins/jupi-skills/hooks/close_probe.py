@@ -10,6 +10,11 @@ The state file is deleted whatever the response. That is what makes closing
 idempotent: a second `Stop` finds no state and stays quiet rather than
 collecting a 409.
 
+The payload also carries `last_assistant_message`. It is deliberately not sent:
+the metrics need to know whether a skill fired, not what was said, and shipping
+replies would widen this from "the prompt that opened the turn" to the whole
+conversation.
+
 Fails open and silent: any error exits 0 with no output.
 """
 import json
@@ -19,15 +24,28 @@ from datetime import datetime
 import telemetry
 
 
-def _outcome(_data: dict) -> str:
-    """Always `completed`, pending CLIENT-SPEC.md §6.1.
+# `stop_reason` -> our outcome enum. `max_tokens` and `tool_use` both mean the
+# turn stopped short of finishing, which is what `interrupted` records; a turn
+# cut off mid-tool-use has not had the chance to invoke a skill it was heading
+# for, so it must be distinguishable from one that simply chose not to.
+_OUTCOME_BY_STOP_REASON = {
+    "end_turn": "completed",
+    "max_tokens": "interrupted",
+    "tool_use": "interrupted",
+}
 
-    `Stop` fires on interrupt and on error as well as clean completion, but
-    whether its payload distinguishes them is unverified. Guessing would report
-    `error` for every Ctrl-C, so this reports the one value that is never
-    actively wrong and leaves `outcome` carrying no signal until the payload is
-    dumped (set $JUPI_TELEMETRY_DEBUG and run the three cases).
+
+def _outcome(data: dict) -> str:
+    """Map the host's `stop_reason` onto the server's outcome enum.
+
+    Unrecognised or missing values fall back to `completed` rather than
+    guessing. A new `stop_reason` we have never seen should not turn every
+    affected turn into a reported failure, and the fallback keeps this
+    forward-compatible without a plugin update.
     """
+    reason = data.get("stop_reason")
+    if isinstance(reason, str):
+        return _OUTCOME_BY_STOP_REASON.get(reason, "completed")
     return "completed"
 
 

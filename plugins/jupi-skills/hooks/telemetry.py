@@ -291,9 +291,9 @@ def sweep_stale_state(now: float | None = None) -> None:
 def debug_dump(label: str, payload: object) -> None:
     """Append a raw hook payload to $JUPI_TELEMETRY_DEBUG, when set.
 
-    Exists to settle the two open questions in CLIENT-SPEC.md §6 — how a `Stop`
-    payload signals interrupt versus error, and whether anything identifies the
-    surface — without hand-rolling a throwaway hook for each.
+    Useful for seeing exactly what the host passes a hook without hand-rolling a
+    throwaway script — which is how `stop_reason` and `CLAUDE_CODE_ENTRYPOINT`
+    got pinned down.
     """
     target = _env("JUPI_TELEMETRY_DEBUG")
     if not target:
