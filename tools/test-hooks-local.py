@@ -31,8 +31,8 @@ SESSION = "test-session-0001"
 VERSION_SHA = "489e80e"
 
 ALLOWED = {
-    "open": {"v", "event", "trace_id", "plugin_version", "client",
-             "started_at", "ideation", "nudged", "user_input"},
+    "open": {"v", "event", "trace_id", "session_hash", "plugin_version",
+             "client", "started_at", "ideation", "nudged", "user_input"},
     "skill": {"v", "event", "trace_id", "skill", "at"},
     "close": {"v", "event", "trace_id", "ended_at", "duration_ms", "outcome"},
 }
@@ -227,6 +227,24 @@ def main() -> int:
     check("plugin_version omitted, not faked",
           "plugin_version" not in Stub.received[0])
     check("trace line still prints", "trace:" in out)
+
+    print("\nsession_hash groups the turns of one conversation")
+    Stub.received.clear()
+    run_hook("ideation_nudge.py", {**prompt, "session_id": "conv-A"}, on)
+    run_hook("close_probe.py", {"session_id": "conv-A"}, on)
+    run_hook("ideation_nudge.py", {**prompt, "session_id": "conv-A"}, on)
+    run_hook("ideation_nudge.py", {**prompt, "session_id": "conv-B"}, on)
+    opens = [e for e in Stub.received if e["event"] == "open"]
+    check("three opens recorded", len(opens) == 3)
+    check("32 hex", len(opens[0]["session_hash"]) == 32)
+    check("same conversation -> same hash",
+          opens[0]["session_hash"] == opens[1]["session_hash"])
+    check("different conversation -> different hash",
+          opens[2]["session_hash"] != opens[0]["session_hash"])
+    check("hash is not the raw session id",
+          "conv-A" not in json.dumps(opens[0]))
+    check("distinct trace per turn",
+          opens[0]["trace_id"] != opens[1]["trace_id"])
 
     print("\nenabled by jupi.local.json, no env vars")
     Stub.received.clear()

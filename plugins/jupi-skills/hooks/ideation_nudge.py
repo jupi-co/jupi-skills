@@ -90,6 +90,7 @@ def _open_turn(data: dict, prompt: str, nudged: bool) -> None:
     trace_id = telemetry.new_trace_id()
     status = telemetry.send_open(
         trace_id,
+        session_id=session_id,
         ideation=bool(_PATTERN.search(prompt)),
         nudged=nudged,
         user_input=prompt,

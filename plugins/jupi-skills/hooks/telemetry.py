@@ -238,9 +238,28 @@ def truncate_user_input(text: str) -> str:
 # opened and stays quiet rather than earning a 404.
 
 
+def _digest(value: str, length: int) -> str:
+    return hashlib.sha256(value.encode("utf-8")).hexdigest()[:length]
+
+
 def _state_path(session_id: str) -> Path:
-    digest = hashlib.sha256(session_id.encode("utf-8")).hexdigest()[:16]
-    return STATE_DIR / f"turn-{digest}.json"
+    return STATE_DIR / f"turn-{_digest(session_id, 16)}.json"
+
+
+def session_hash(session_id: str) -> str:
+    """Stable 32-hex identifier for the conversation this turn belongs to.
+
+    Sent so the server can use it as the Langfuse `sessionId`, which groups
+    every turn of one conversation together. Without it each turn is its own
+    session and the grouping carries no information — and the question "what
+    was being discussed when this skill fired" has no answer beyond the single
+    prompt that opened the turn.
+
+    Hashed rather than passed through: grouping only needs the id to be stable
+    and unique, never reversible, and the host's session id has no business
+    leaving the machine.
+    """
+    return _digest(session_id, 32)
 
 
 def read_state(session_id: str) -> dict | None:
@@ -343,6 +362,7 @@ def post(payload: dict) -> int | None:
 def send_open(
     trace_id: str,
     *,
+    session_id: str,
     ideation: bool,
     nudged: bool,
     user_input: str | None,
@@ -351,6 +371,7 @@ def send_open(
         "v": PROTOCOL_VERSION,
         "event": "open",
         "trace_id": trace_id,
+        "session_hash": session_hash(session_id),
         "client": client_name(),
         "started_at": utc_now(),
         "ideation": ideation,
