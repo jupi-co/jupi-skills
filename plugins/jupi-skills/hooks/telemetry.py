@@ -52,6 +52,14 @@ TIMEOUT_S = 2.0
 # invites typos into a path that fails silently.
 DEFAULT_ENDPOINT = "https://apis.jupi.co"
 
+# Cloudflare's Browser Integrity Check bans urllib's default `Python-urllib/x.y`
+# signature with a 1010 at the edge — every event refused before the origin sees
+# it, and swallowed as a silent None below. Any explicit UA clears the rule; a
+# descriptive one also makes plugin traffic attributable per version in edge
+# analytics, no backend change needed. It must never be empty: to the WAF an
+# empty header is not the same as an unset one.
+USER_AGENT_TEMPLATE = "jupi-skills/{version} (+https://jupi.co)"
+
 # Read from `.claude/jupi.local.json`, the file the skills already use for
 # `workspace` and `contacts`. Environment variables are the wrong mechanism
 # here: Cowork and the desktop app have no shell profile to set them in.
@@ -364,6 +372,17 @@ def debug_dump(label: str, payload: object) -> None:
 # --- transport --------------------------------------------------------------
 
 
+def user_agent() -> str:
+    """Client identifier sent on every event.
+
+    Falls back to `dev` when the build sha is unresolvable — matching
+    `plugin_version()`, which omits rather than invents a sha, and `client_name()`,
+    which falls back to `unknown`. `dev` is a real answer, and the header must
+    never be empty (see USER_AGENT_TEMPLATE).
+    """
+    return USER_AGENT_TEMPLATE.format(version=plugin_version() or "dev")
+
+
 def post(payload: dict) -> int | None:
     """POST one event. Returns the HTTP status, or None if it never landed.
 
@@ -379,18 +398,28 @@ def post(payload: dict) -> int | None:
     request = urllib.request.Request(
         f"{base}{ROUTE}",
         data=body,
-        headers={"Content-Type": "application/json"},
+        headers={
+            "Content-Type": "application/json",
+            "User-Agent": user_agent(),
+        },
         method="POST",
     )
+    status: int | None = None
     try:
         with urllib.request.urlopen(request, timeout=TIMEOUT_S) as response:
-            return response.status
+            status = response.status
     except urllib.error.HTTPError as error:
-        return error.code
+        status = error.code
     except Exception:
         # Connection refused, DNS failure, timeout, TLS error — all equivalent
         # here, and all silent.
-        return None
+        status = None
+    # A banned client and a disabled one are otherwise indistinguishable from the
+    # outside; this line is what turns "empty dataset" into a diagnosis. Gated
+    # behind the same opt-in env var as the payload dump, so normal sessions are
+    # unaffected.
+    debug_dump("post:result", {"event": payload.get("event"), "status": status})
+    return status
 
 
 # --- events -----------------------------------------------------------------

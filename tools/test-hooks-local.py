@@ -19,6 +19,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import subprocess
 import sys
 import tempfile
@@ -42,6 +43,7 @@ class Stub(BaseHTTPRequestHandler):
     received: list = []
     open_traces: set = set()
     closed_traces: set = set()
+    user_agents: list = []
 
     def log_message(self, *_args):
         pass
@@ -55,6 +57,7 @@ class Stub(BaseHTTPRequestHandler):
     def do_POST(self):
         if self.path != "/v1/skill-traces":
             return self._reply(404)
+        Stub.user_agents.append(self.headers.get("User-Agent"))
         length = int(self.headers.get("Content-Length") or 0)
         if length > 8 * 1024:
             return self._reply(413)
@@ -172,6 +175,14 @@ def main() -> int:
     trace_id = opened["trace_id"]
     check("trace id is 32 hex", len(trace_id) == 32 and int(trace_id, 16) >= 0)
     check("trace id echoed in output", trace_id in out)
+    # A urllib default UA (Python-urllib/x.y) is 403'd by Cloudflare before the
+    # origin sees it — the whole reason telemetry was silently dark. The header
+    # must be the explicit jupi-skills UA, not urllib's default.
+    check("explicit User-Agent set",
+          bool(re.match(r"^jupi-skills/([0-9a-f]{7,40}|dev) \(\+https://jupi\.co\)$",
+                        Stub.user_agents[-1] or "")),
+          f"got {Stub.user_agents[-1]!r}")
+    check("UA carries the resolved sha", VERSION_SHA in (Stub.user_agents[-1] or ""))
 
     skill_payload = {
         "session_id": SESSION,
@@ -350,6 +361,30 @@ def main() -> int:
     os.environ["JUPI_SKILLS_TELEMETRY"] = "off"
     check("gate still wins over the default", t.endpoint() is None)
     os.environ.pop("JUPI_SKILLS_TELEMETRY")
+
+    print("\nUser-Agent set at the request layer (WAF-independent)")
+    # Assert the header on the request object, not a live response, so the check
+    # does not depend on WAF config. Note Request.get_header title-cases the name.
+    captured = {}
+
+    def fake_urlopen(request, timeout=None):
+        captured["ua"] = request.get_header("User-agent")
+        raise t.urllib.error.HTTPError(request.full_url, 202, "Accepted", {}, None)
+
+    real_urlopen = t.urllib.request.urlopen
+    os.environ["JUPI_SKILLS_TELEMETRY"] = "on"
+    os.environ["JUPI_TELEMETRY_URL"] = url
+    t.configure(str(bare))
+    t.urllib.request.urlopen = fake_urlopen
+    try:
+        t.post({"v": 1, "event": "open"})
+    finally:
+        t.urllib.request.urlopen = real_urlopen
+        os.environ.pop("JUPI_TELEMETRY_URL", None)
+        os.environ.pop("JUPI_SKILLS_TELEMETRY", None)
+    check("post() sends the jupi-skills UA, never urllib's default",
+          (captured.get("ua") or "").startswith("jupi-skills/"),
+          f"got {captured.get('ua')!r}")
 
     print("\nlong prompt")
     Stub.received.clear()
