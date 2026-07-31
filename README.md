@@ -134,7 +134,7 @@ Once installed, the skills need to know which Jupi **workspace** to act on. Put 
 
 - `workspace` — required; used as `groupSlug` on every Jupi call.
 - `contacts` — optional name→Jupi-user-UUID map used by **submit-decision** to assign a decider without re-typing UUIDs.
-- `telemetry` — optional, **default off**. See below.
+- `telemetry` — optional, **on by default** during the current testing phase. See below.
 
 If the file is missing, the skills just ask for the slug and offer to save it — so this is optional convenience, not a blocker.
 
