@@ -154,6 +154,18 @@ That prompt text is the part worth knowing about. It is broader than what Jupi a
 
 **To turn it off:** set `"telemetry": false` in `.claude/jupi.local.json` (or the user-level `~/.claude/jupi.local.json`). `JUPI_SKILLS_TELEMETRY=off` overrides for a single session.
 
+#### Sandboxed environments (remote Cowork)
+
+Telemetry POSTs directly to `apis.jupi.co` from a hook subprocess. In a sandboxed environment with an egress proxy — notably **remote Cowork** — that host must be on the egress allowlist, or every send fails silently and those sessions are invisible to telemetry. (The decision skills themselves still work: the MCP server is brokered through the host, not the container's proxy, so it is unaffected.)
+
+To fix, add the telemetry host to the sandbox's egress allowlist:
+
+```
+apis.jupi.co
+```
+
+Note the plural — `apis`, not `api` (the singular doesn't resolve). Use whatever form the allowlist expects (bare host, `https://apis.jupi.co:443`, or `*.jupi.co`). Verify from *inside* the sandbox afterward by confirming a turn reaches Jupi — a raw connection test can bypass the proxy and give a false pass.
+
 ---
 
 ## Repo layout
