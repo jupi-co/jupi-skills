@@ -45,10 +45,17 @@ Before opening a PR, run the same checks CI runs:
 
 ```bash
 claude plugin validate .                       # the catalog
-claude plugin validate plugins/jupi-skills     # the plugin (checks SKILL.md frontmatter)
+claude plugin validate plugins/jupi-skills     # a plugin (checks SKILL.md frontmatter)
+claude plugin validate plugins/proactive-jupi
 ```
 
-CI (`.github/workflows/validate.yml`) runs these on every PR and push to `main`, blocking a broken catalog or malformed `SKILL.md` frontmatter from landing.
+`tools/validate-plugin.sh` runs an extra pass over **every** plugin under `plugins/*` — it catches XML-like tags and over-1024-char descriptions in `SKILL.md` files, which Cowork's validator rejects but `claude plugin validate` does not.
+
+CI (`.github/workflows/validate.yml`) runs `claude plugin validate` on the catalog and every plugin on each PR and push to `main`, blocking a broken catalog or malformed `SKILL.md` frontmatter from landing.
+
+### Optional: build the uploadable zips
+
+`tools/install-hooks.sh` wires a `post-commit` hook (`core.hooksPath .githooks`) that validates and rebuilds `dist/<plugin>.zip` from each commit — the artifacts Cowork uploads. `dist/` is gitignored; the hook is opt-in per clone.
 
 ## Shipping
 
