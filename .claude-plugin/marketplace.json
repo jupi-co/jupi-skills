@@ -13,29 +13,9 @@
       "description": "Decision skills backed by the Jupi MCP: search-decisions (find prior decisions), log-decision (record a settled call), submit-decision (hand an open call to a decider)."
     },
     {
-      "name": "jupi-skills-staging",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/jupi-co/jupi-skills.git",
-        "path": "plugins/jupi-skills",
-        "ref": "staging"
-      },
-      "description": "STAGING — unreleased build of jupi-skills for pre-merge testing. Tracks the `staging` branch; not for production use."
-    },
-    {
-      "name": "jupi",
-      "source": "./plugins/jupi",
-      "description": "Jupi proactive decision engine — placeholder; build in progress. Use jupi-staging to test the unreleased version."
-    },
-    {
-      "name": "jupi-staging",
-      "source": {
-        "source": "git-subdir",
-        "url": "https://github.com/jupi-co/jupi-skills.git",
-        "path": "plugins/jupi",
-        "ref": "staging"
-      },
-      "description": "STAGING — unreleased build of the jupi plugin for pre-merge testing. Tracks the `staging` branch; not for production use."
+      "name": "proactive-jupi",
+      "source": "./plugins/proactive-jupi",
+      "description": "Proactive-Jupi proactive decision engine — builds context on you and your work, turns incoming signals into a scored task backlog, posts ready-to-settle Jupi decisions for genuine trade-offs, and executes the ones you resolve. Includes a setup skill to cold-start the workspace."
     }
   ]
 }

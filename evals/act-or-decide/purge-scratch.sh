@@ -1,0 +1,41 @@
+#!/usr/bin/env bash
+# Purge act-or-decide eval state from Neon — eval teardown.
+# Deletes tasks whose signal_ref is prefixed 'eval:' (their actions cascade via the
+# FK on delete cascade). Reads neonConnString from the gitignored
+# .proactive-jupi/config.local.json. Run after the write-path behavioral eval (case 5).
+# NOTE: Jupi decisions posted by a non-dry run are NOT purged here (they live in Jupi,
+# not Neon) — run write cases sparingly and archive stray eval decisions in Jupi by hand.
+# Usage: bash evals/act-or-decide/purge-scratch.sh
+set -euo pipefail
+
+ROOT="$(git rev-parse --show-toplevel)"
+SHARED="$ROOT/plugins/proactive-jupi/shared"
+
+# The driver has to resolve before the heredoc below imports it by path. Without this the script
+# dies with ERR_MODULE_NOT_FOUND on any checkout that has never run a skill — which is exactly the
+# state you are in when a run went wrong and you need to purge.
+bash "$SHARED/ensure-deps.sh" || { echo "purge: shared deps unavailable — see above" >&2; exit 1; }
+
+node --input-type=module -e "
+import { readFileSync } from 'node:fs';
+import { neon } from '$SHARED/node_modules/@neondatabase/serverless/index.mjs';
+// Config resolution mirrors db.mjs: env first (a scratch run often has no config file
+// at the repo root at all — it lives in the scratch workspace), then the repo's own.
+let cfg = {};
+try { cfg = JSON.parse(readFileSync(process.env.PROACTIVE_CONFIG || '$ROOT/.proactive-jupi/config.local.json','utf8')); } catch {}
+const conn = process.env.NEON_CONN_STRING || process.env.DATABASE_URL || cfg.neonConnString;
+if (!conn) throw new Error('no connection string: set \$NEON_CONN_STRING, or \$PROACTIVE_CONFIG to the scratch config path');
+// Scope every delete by tenant. The schema is shared-DB-ready: user_id is the row-level
+// boundary, so an unscoped delete would purge OTHER tenants' eval rows too.
+const uid = process.env.JUPI_USER_ID || cfg.jupiUserId;
+if (!uid) throw new Error('no tenant id: set \$JUPI_USER_ID or jupiUserId in config.local.json');
+const sql = neon(conn);
+const t = await sql.query(\"delete from tasks where user_id = \$1 and signal_ref like 'eval:%' returning id\", [uid]);
+console.log('deleted eval tasks:', t.length, '(their actions cascaded)');
+// Frontier pushes have no FK to the task, so they don't cascade — delete them explicitly or an
+// eval leaves items that the next real update-brain run would drain and crawl for real.
+// Matched two ways: is_eval, and the eval-prefixed signal_ref act-or-decide carries into source_ref.
+const f = await sql.query(\"delete from crawl_frontier where user_id = \$1 and (is_eval = true or source_ref like 'eval:%') returning id\", [uid]);
+console.log('deleted eval frontier items:', f.length);
+"
+echo "done."

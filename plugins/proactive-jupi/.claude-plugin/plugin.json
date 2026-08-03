@@ -1,0 +1,11 @@
+{
+  "name": "proactive-jupi",
+  "description": "Proactive-Jupi — proactive decision engine. Builds and maintains context on you and your work, turns incoming signals into a scored task backlog, and — only for genuine trade-offs — posts ready-to-settle Jupi decisions whose options each carry an executable action; then executes the ones you resolve. Includes a setup skill to cold-start the workspace.",
+  "author": { "name": "Jupi", "email": "a@jupi.co" },
+  "homepage": "https://github.com/jupi-co/jupi-skills",
+  "license": "MIT",
+  "keywords": ["jupi", "decisions", "automation", "context", "mcp", "agent", "proactive"],
+  "dependencies": [
+    { "name": "jupi-skills", "marketplace": "jupi-skills" }
+  ]
+}

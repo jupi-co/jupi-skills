@@ -12,6 +12,8 @@ These skills let an agent (in Claude Code, Cowork, or Cursor) work with your tea
 
 All three are bundled in a single plugin, `jupi-skills`.
 
+This marketplace also ships **`proactive-jupi`** — the proactive decision engine that builds context on you and your work, turns incoming signals into a scored task backlog, and posts ready-to-settle Jupi decisions for genuine trade-offs. See [Proactive-Jupi](#proactive-jupi) below.
+
 > The skills call the **Jupi MCP server** (`https://apis.jupi.co/mcp`). In Claude Code & Cowork it's **bundled with the plugin** — nothing to install separately. Cursor needs it added manually (see [Cursor](#cursor)).
 
 ---
@@ -45,20 +47,6 @@ The plugin **bundles the Jupi MCP**, so it's registered automatically when the p
 They also auto-trigger from natural phrasing — e.g. "have we decided X?" (search), "log that we're going with Y" (log), "escalate this to the eng lead" (submit).
 
 > **Versioning:** none, by design. Consumers track `main` (the default branch); the effective version is its latest commit SHA. Every commit that lands on `main` is one clean update for everyone — no version bumps, no release bookkeeping. So keep `main` shippable.
-
-### Testing unreleased changes (`jupi-skills-staging`)
-
-The catalog also exposes a `jupi-skills-staging` plugin that tracks the
-`staging` branch instead of `main` — use it to try a change before it merges.
-
-Point `staging` at the branch you want to test, then install:
-
-    git branch -f staging origin/<pr-branch> && git push -f origin staging
-    /plugin install jupi-skills-staging@jupi-skills
-
-It installs under its own namespace (`/jupi-skills-staging:…`), so it runs
-alongside the production plugin. Refresh the plugin after each push to
-`staging`. The branch is disposable — don't develop on it.
 
 ### Auto-update
 
@@ -168,6 +156,26 @@ Note the plural — `apis`, not `api` (the singular doesn't resolve). Use whatev
 
 ---
 
+## Proactive-Jupi
+
+`proactive-jupi` is the proactive decision engine. Where the three decision skills above are things **you** invoke, proactive-jupi runs a loop over your connected tools (Gmail, Calendar, Linear…): it maintains a per-user brain of context, turns incoming signals into a scored task backlog, and — only for genuine trade-offs — posts ready-to-settle Jupi decisions whose options each carry an executable action, then executes the ones you resolve.
+
+Install it from the same marketplace:
+
+```
+/plugin install proactive-jupi@jupi-skills
+```
+
+It bundles the same Jupi MCP and **depends on `jupi-skills`** (declared in its manifest), so installing it pulls the decision skills too. It also needs a Neon database and a Supermemory brain — the bundled **setup skill** cold-starts the workspace end to end:
+
+```
+/proactive-jupi:setup-proactive-jupi
+```
+
+Its skills: `refresh-backlog` (signals → scored tasks), `update-brain` (crawl tools into Facts), `act-or-decide` (work the backlog: act or raise a decision), `act-post-decision` (carry out decisions you've settled), `execute-action` (the only skill that writes to your tools), and `setup-proactive-jupi`. Instance state and secrets live under `.proactive-jupi/` (gitignored).
+
+---
+
 ## Repo layout
 
 ```
@@ -179,7 +187,16 @@ plugins/jupi-skills/
     search-decisions/SKILL.md
     log-decision/SKILL.md
     submit-decision/SKILL.md
-.github/workflows/validate.yml         CI: validates catalog + plugin on every PR/push
+plugins/proactive-jupi/
+  .claude-plugin/plugin.json           manifest (no version; depends on jupi-skills)
+  .mcp.json                            bundled Jupi MCP
+  shared/                              db.mjs, schema.sql, apply-schema.mjs, ensure-deps.sh
+  skills/                              refresh-backlog, update-brain, act-or-decide,
+                                       act-post-decision, execute-action, setup-proactive-jupi
+tools/                                 validate-plugin.sh, package-plugin.sh, install-hooks.sh, …
+evals/                                 skill eval suites (run-eval.sh, seed-scratch.mjs)
+.githooks/post-commit                  validates + rebuilds dist/ zips on commit (opt-in via tools/install-hooks.sh)
+.github/workflows/validate.yml         CI: validates catalog + every plugin on each PR/push
 CONTRIBUTING.md                        how to add/edit a skill and ship it
 ```
 
