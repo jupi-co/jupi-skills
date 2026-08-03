@@ -2,15 +2,18 @@
 __pycache__/
 *.pyc
 
-# Consumer-side, never committed here (documented for contributors who test locally)
+# Harness-owned local settings + consumer-side config, never committed here
+# (documented for contributors who test locally). Glob, not per-file: a
+# setup.local.json holding a live Neon connection string and a Supermemory key
+# once sat here untracked-but-unignored for five days.
+.claude/*.local.json
 .claude/settings.local.json
-.claude/jupi.local.json
 
 # proactive-jupi: instance state & secrets — never commit.
+# (the .env.template beside it IS committed and must never hold a real value)
 .proactive-jupi/config.local.json
 .proactive-jupi/*.local.json
 .proactive-jupi/.env
-.claude/proactive-jupi.local.json
 
 # proactive-jupi: shared/ runtime deps (installed at runtime by ensure-deps.sh, not vendored)
 node_modules/
