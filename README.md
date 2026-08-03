@@ -190,9 +190,9 @@ Setup front-loads everything human-gated into an attended prelude — config key
 
 Its skills: `refresh-backlog` (signals → scored tasks), `update-brain` (crawl tools into Facts), `act-or-decide` (work the backlog: act or raise a decision), `act-post-decision` (carry out decisions you've settled), `execute-action` (the only skill that writes to your tools), and `setup-proactive-jupi`. Instance state and secrets live under `.proactive-jupi/` (gitignored).
 
-### Config — two files, two jobs
+### Config — the engine's own two files
 
-Both are gitignored; each has a committed template. **Neither ever names a tool** — which tool plays which role lives in `.proactive-jupi/assets.md` (the roles table: `inbox`, `context`, `work`, `decision`, `rules`, `brain`).
+Separate from the decision skills' [`.claude/jupi.local.json`](#configuration-point-the-skills-at-your-workspace) above; the engine reads its own. Both are gitignored and each has a committed template. **Neither ever names a tool** — which tool plays which role lives in `.proactive-jupi/assets.md` (the roles table: `inbox`, `context`, `work`, `decision`, `rules`, `brain`).
 
 | File | Holds | Template | Who reads it |
 |---|---|---|---|
@@ -201,7 +201,7 @@ Both are gitignored; each has a committed template. **Neither ever names a tool*
 
 The Supermemory key is deliberately **not** in `config.local.json`: that file is mirrored into unattended/cloud run CWDs, so an admin-scoped key would travel with every scheduled routine. The runtime never needs it — the skills reach Supermemory through the installed MCP connector.
 
-Design docs for the engine (the implementation plan and the per-phase plans referenced from the skills and evals) live in [`docs/proactive-jupi/`](docs/proactive-jupi/); working conventions are in [CLAUDE.md](CLAUDE.md).
+Design docs for the engine (the implementation plan and the per-phase plans referenced from its skills and evals) live in [`docs/proactive-jupi/`](docs/proactive-jupi/).
 
 ---
 
@@ -212,6 +212,7 @@ Design docs for the engine (the implementation plan and the per-phase plans refe
 plugins/jupi-skills/
   .claude-plugin/plugin.json           plugin manifest (no version — by design)
   .mcp.json                            bundled Jupi MCP (auto-registers on install)
+  hooks/                               ideation nudge + turn telemetry (hooks.json + 4 py)
   skills/
     search-decisions/SKILL.md
     log-decision/SKILL.md
