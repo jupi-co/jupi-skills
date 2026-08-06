@@ -160,6 +160,18 @@ Note the plural — `apis`, not `api` (the singular doesn't resolve). Use whatev
 
 `proactive-jupi` is the proactive decision engine. Where the three decision skills above are things **you** invoke, proactive-jupi runs a loop over your connected tools (Gmail, Calendar, Linear…): it maintains a per-user brain of context, turns incoming signals into a scored task backlog, and — only for genuine trade-offs — posts ready-to-settle Jupi decisions whose options each carry an executable action, then executes the ones you resolve.
 
+### Architecture
+
+Two scheduled routines (daily, cloud). **refresh-brain** crawls your tools into the Supermemory brain; **act-&-decide** works the backlog: parse + score signals into Neon, then either act (draft/send) or raise a decision in Jupi for you to finalize. Boxes say what each skill does; arrows carry the entity that flows.
+
+<p align="center"><img src="docs/architecture-flow.svg" alt="Proactive-Jupi run flow: signals through refresh-backlog, Neon, act-or-decide, and execute-action, with the decision fork through Jupi and the brain lane through Supermemory" width="460"></p>
+
+State lives in three stores — **Neon** (tasks + actions), **Jupi** (decisions + lifecycle), **Supermemory** (Facts). Neon holds five tables; here is who reads and writes each, and how the refresh-brain routine uses `crawl_state` (its cursor) and `crawl_frontier` (drained into Facts).
+
+<p align="center"><img src="docs/architecture-neon-tables.svg" alt="The five Neon tables — tasks, actions, crawl_state, crawl_frontier, routine_runs — tagged by routine, with the act-&-decide and refresh-brain read/write wiring" width="640"></p>
+
+### Install and set up
+
 Install it from the same marketplace:
 
 ```
@@ -172,7 +184,24 @@ It bundles the same Jupi MCP and **depends on `jupi-skills`** (declared in its m
 /proactive-jupi:setup-proactive-jupi
 ```
 
+Setup front-loads everything human-gated into an attended prelude — config keys, OAuth consents, questions about your stack and tools, and the Neon credential + egress probe — behind a `✋ needs-you done` boundary. Steps after that boundary run unattended. Budget ~15 minutes and stay at the keyboard until you see it.
+
+> **Allowlist Neon's hosts first.** Proactive-Jupi reaches Neon over HTTPS, and databases live on per-project `*.aws.neon.tech` hosts. If your environment restricts network egress, allow **`*.aws.neon.tech`** (and **`*.neon.tech`**) under **Admin settings → Capabilities → network access** before running setup, so the egress probe clears on the first try. (This is separate from the telemetry host above — allow both.)
+
 Its skills: `refresh-backlog` (signals → scored tasks), `update-brain` (crawl tools into Facts), `act-or-decide` (work the backlog: act or raise a decision), `act-post-decision` (carry out decisions you've settled), `execute-action` (the only skill that writes to your tools), and `setup-proactive-jupi`. Instance state and secrets live under `.proactive-jupi/` (gitignored).
+
+### Config — the engine's own two files
+
+Separate from the decision skills' [`.claude/jupi.local.json`](#configuration-point-the-skills-at-your-workspace) above; the engine reads its own. Both are gitignored and each has a committed template. **Neither ever names a tool** — which tool plays which role lives in `.proactive-jupi/assets.md` (the roles table: `inbox`, `context`, `work`, `decision`, `rules`, `brain`).
+
+| File | Holds | Template | Who reads it |
+|---|---|---|---|
+| `.proactive-jupi/config.local.json` | Per-workspace **ids/secrets** to reach a store (`jupiUserId`, `neonConnString`, `rulesStoreRef`, …) + **settings/thresholds** (`crawlWindowDays`, `ruleThreshold`, `guardrails`, …) | [`…/reference/config.template.json`](plugins/proactive-jupi/skills/setup-proactive-jupi/reference/config.template.json) — setup copies it in and collects missing keys | The skills, at runtime |
+| `.proactive-jupi/.env` | **Dev-tooling secrets for this repo only** (`SUPERMEMORY_API_KEY`) | [`.proactive-jupi/.env.template`](.proactive-jupi/.env.template) — `cp .proactive-jupi/.env.template .proactive-jupi/.env` | Repo scripts you run by hand (`evals/*/purge-scratch.sh`, ad-hoc HTTP-API ops) |
+
+The Supermemory key is deliberately **not** in `config.local.json`: that file is mirrored into unattended/cloud run CWDs, so an admin-scoped key would travel with every scheduled routine. The runtime never needs it — the skills reach Supermemory through the installed MCP connector.
+
+Design docs for the engine (the implementation plan and the per-phase plans referenced from its skills and evals) live in [`docs/proactive-jupi/`](docs/proactive-jupi/).
 
 ---
 
@@ -183,6 +212,7 @@ Its skills: `refresh-backlog` (signals → scored tasks), `update-brain` (crawl 
 plugins/jupi-skills/
   .claude-plugin/plugin.json           plugin manifest (no version — by design)
   .mcp.json                            bundled Jupi MCP (auto-registers on install)
+  hooks/                               ideation nudge + turn telemetry (hooks.json + 4 py)
   skills/
     search-decisions/SKILL.md
     log-decision/SKILL.md
@@ -195,6 +225,10 @@ plugins/proactive-jupi/
                                        act-post-decision, execute-action, setup-proactive-jupi
 tools/                                 validate-plugin.sh, package-plugin.sh, install-hooks.sh, …
 evals/                                 skill eval suites (run-eval.sh, seed-scratch.mjs)
+docs/                                  architecture diagrams (SVG)
+docs/proactive-jupi/                   engine design docs (IMPLEMENTATION-PLAN, PHASE-2…5-PLAN)
+.proactive-jupi/.env.template          dev-tooling secrets template (copy to .env, gitignored)
+CLAUDE.md                              working conventions for agent sessions in this repo
 .githooks/post-commit                  validates + rebuilds dist/ zips on commit (opt-in via tools/install-hooks.sh)
 .github/workflows/validate.yml         CI: validates catalog + every plugin on each PR/push
 CONTRIBUTING.md                        how to add/edit a skill and ship it
