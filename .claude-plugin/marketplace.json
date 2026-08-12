@@ -16,6 +16,11 @@
       "name": "proactive-jupi",
       "source": "./plugins/proactive-jupi",
       "description": "Proactive-Jupi proactive decision engine — builds context on you and your work, turns incoming signals into a scored task backlog, posts ready-to-settle Jupi decisions for genuine trade-offs, and executes the ones you resolve. Includes a setup skill to cold-start the workspace."
+    },
+    {
+      "name": "playbook-jupi",
+      "source": "./plugins/playbook-jupi",
+      "description": "Playbook-Jupi closed-world playbook engine (fork of proactive-jupi) — fixed account dossiers traverse a funnel defined by a co-constructed playbook; holes in the playbook surface as ready-to-settle Jupi decisions; validated decisions become rules that graduate steps from ask-every-time to act. Includes a bootstrap skill that creates the playbook store and dossiers and runs the extraction."
     }
   ]
 }

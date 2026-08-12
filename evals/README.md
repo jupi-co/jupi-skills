@@ -155,3 +155,8 @@ isn't an auth failure.
 | [`act-post-decision`](act-post-decision/) | ✅ | ✅ | Needs FINALIZED fixture decisions in the test workspace |
 | [`execute-action`](execute-action/) | ✅ | ⛔ none yet | The only tool-writer — behavioral coverage is a known gap |
 | [`setup-proactive-jupi`](setup-proactive-jupi/) | ⛔ n/a | ✅ 10 cases | `disable-model-invocation`, so nothing to trigger-tune; runs in a scratch workspace |
+
+The root-level sets above belong to **proactive-jupi**. Other plugins nest their sets one level down —
+**[`playbook-jupi/`](playbook-jupi/)** holds the sets for that plugin's rewritten skills (scaffolded,
+cases TODO); pass the nested path as the skill argument (`./evals/run-eval.sh layout
+playbook-jupi/act-or-decide`). Everything in this file applies to them unchanged.
