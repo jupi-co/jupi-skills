@@ -1,10 +1,18 @@
--- Proactive-Jupi backlog store — Neon Postgres.
--- The plugin's DB contract; applied by the setup skill (step 5). Idempotent.
+-- Playbook-Jupi store — Neon Postgres.
+-- The plugin's DB contract; applied by the setup skill. Idempotent.
 --
--- Five tables: TASKS (the backlog) · ACTIONS (units of execution) · CRAWL_STATE
--- (incremental cursors, shared with update-brain) · CRAWL_FRONTIER (the queue of
--- things worth looking up, pushed by whoever trips over them) · ROUTINE_RUNS (did
--- the scheduled routine run? — the one thing a routine writes about itself).
+-- FORKED from proactive-jupi's schema.sql: divergence here is EXPECTED — the
+-- byte-parity contract between the two plugins covers only db.mjs and
+-- ensure-deps.sh. Playbook-specific state (playbook_entries, the dossier stage
+-- on tasks) lives here and in shared/playbook.mjs, never in db.mjs.
+--
+-- Six tables: TASKS (the backlog — and, in this plugin, the account DOSSIERS)
+-- · ACTIONS (units of execution) · CRAWL_STATE (incremental cursors, shared
+-- with update-brain) · CRAWL_FRONTIER (the queue of things worth looking up,
+-- pushed by whoever trips over them) · ROUTINE_RUNS (did the scheduled routine
+-- run? — the one thing a routine writes about itself) · PLAYBOOK_ENTRIES (the
+-- structured playbook state: decision points, their answers, and the status
+-- lifecycle the read-side gate enforces).
 -- There is no decision_registry: the canonical decision + its lifecycle
 -- (STARTED → FINALIZED → EXECUTED) live in Jupi. The "pile" is just the
 -- gated action rows — each carries the Jupi decision/option it depends on
@@ -55,6 +63,17 @@ create table if not exists tasks (
   relevant_facts  jsonb not null default '[]',         -- [{summary, source}] — light Supermemory recall refs (read-only; update-brain owns writes)
   open_questions  jsonb not null default '[]',         -- [{uncertainty_pct, description}] — candidate decisions
   gating_decision_ids uuid[] not null default '{}',    -- Jupi decision ids this task's actions wait on; the poll fetches these
+  -- ── Dossier model (playbook-jupi) — design §8. One account = one long-lived
+  -- tasks row traversing the funnel. NULL stage = an ordinary (non-dossier) task;
+  -- dossier rows carry signal_type='dossier' and a stable signal_ref, so the
+  -- existing blocked/unblock machinery (status + gating_decision_ids) applies to
+  -- them unchanged. Priority is DERIVED from stage by the planner (waiting reply
+  -- > due follow-up > nothing) — proactive's scoring model is not ported.
+  stage           text check (stage is null or stage in
+                    ('to-qualify','contact-identified','sequence-running',
+                     'reply-to-handle','call-booked','phone-fallback')),
+  stage_detail    text,                                 -- minimal free detail (e.g. current mail index while sequence-running)
+  stage_updated_at timestamptz,                         -- when the dossier last moved stage
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
   closed_at       timestamptz
@@ -227,6 +246,52 @@ create table if not exists routine_runs (
 create index if not exists routine_runs_user_routine_idx
   on routine_runs (user_id, routine, started_at desc);
 
+-- ── PLAYBOOK_ENTRIES ──────────────────────────────────────────────────
+-- The structured playbook state — design §2 (decision points), §3 (status
+-- lifecycle), §4 (the safety invariant), §5 (terminal kinds). One row = one
+-- (decision point × scope) entry: rule lookup is an EXACT match on
+-- (user_id, point_id, scope_key). This table is the truth; any doc (Notion
+-- page, local file) is a projection of it — nothing load-bearing may be
+-- recoverable only by parsing doc text (§15.2).
+--
+-- THE SAFETY INVARIANT (§4): extraction gives entries a second way into this
+-- store, and an inferred entry must never inherit the authority of a validated
+-- one. It is enforced on the READ side: playbook.mjs's `pb-get-rule` — the one
+-- verb the planner's act path may consult — returns ONLY status='validated'
+-- rows. 'inferred'/'declared' entries are reachable solely via
+-- `pb-list-entries`, whose results may pre-fill a decision's recommended
+-- option (provenance cited) and never authorize an act. See
+-- shared/playbook-contract.md.
+create table if not exists playbook_entries (
+  id            uuid primary key default gen_random_uuid(),
+  user_id       text not null,                       -- tenant key = Jupi user id (same rule as everywhere)
+  point_id      text not null,                       -- stable decision-point id ('contactability', 'sequence-template', …)
+  scope_key     text not null default 'global',      -- the generalization axis instance: 'global' | 'broker=X' | 'partner=Y' | …
+  question      text,                                -- the recurring question this point asks
+  scope_axis    text,                                -- the DECLARED axis ('per broker/insurer', 'global', …) — §2
+  answer        text,                                -- the current answer. NULL = a DECLARED HOLE ("not established — ask every time")
+  answer_kind   text check (answer_kind in ('rule','always_ask','delegated')),
+                                                     -- §5 terminal kinds: a rule | validated case-by-case | owner handed the choice over
+  status        text not null default 'inferred'
+                  check (status in ('inferred','declared','validated','suspended')),
+                  -- §3 lifecycle: inferred (LLM-derived) | declared (verbatim from the
+                  -- owner's doc) | validated (a finalized [BR] decision) | suspended
+                  -- (counter-evidence sent it back to case-by-case — §6)
+  version       integer not null default 0,          -- 0 = never validated; bumps on each transition TO validated (vN)
+  provenance    text,                                -- where this came from ("owner doc §2", "decision jupi:<id>", "direct owner edit")
+  evidence_count         integer not null default 0, -- §3 ledger: consistent applications / confirmations
+  counter_evidence_count integer not null default 0, -- §3 ledger: edits, contradictions (§6 feeds the suspension path from this)
+  created_at    timestamptz not null default now(),
+  updated_at    timestamptz not null default now()
+);
+-- The exact-lookup key. One entry per (tenant, point, scope) — an answered scope
+-- and a hole are the same row at different lifecycle states, never two rows.
+create unique index if not exists playbook_entries_user_point_scope_uniq
+  on playbook_entries (user_id, point_id, scope_key);
+-- The planner's other read: everything at a status (holes to raise, inferred to pre-fill).
+create index if not exists playbook_entries_user_status_idx
+  on playbook_entries (user_id, status);
+
 -- ── MIGRATIONS ─────────────────────────────────────────────────────────
 -- Idempotent reconciliation for a tasks table created before the current shape.
 -- No-ops on a fresh install (columns already correct) and on re-runs.
@@ -298,6 +363,24 @@ alter table tasks add column if not exists parse_confidence text not null defaul
 alter table tasks drop constraint if exists tasks_parse_confidence_check;
 alter table tasks add  constraint tasks_parse_confidence_check
   check (parse_confidence in ('low','medium','high'));
+
+-- v5 (playbook-jupi fork): the dossier model — design §8. Carries the stage
+-- columns to a database created before this fork (the shared project already
+-- running proactive's schema is exactly this case). Nullable, so existing
+-- non-dossier tasks are untouched; the CHECK is added via drop + re-add (same
+-- widen pattern as v3) so re-runs are no-ops.
+alter table tasks add column if not exists stage text;
+alter table tasks add column if not exists stage_detail text;
+alter table tasks add column if not exists stage_updated_at timestamptz;
+alter table tasks drop constraint if exists tasks_stage_check;
+alter table tasks add  constraint tasks_stage_check
+  check (stage is null or stage in
+         ('to-qualify','contact-identified','sequence-running',
+          'reply-to-handle','call-booked','phone-fallback'));
+-- The dossier read shape: this tenant's dossiers, optionally at one stage.
+-- Partial: ordinary tasks (stage null) stay out of the index entirely.
+create index if not exists tasks_user_stage_idx
+  on tasks (user_id, stage) where stage is not null;
 
 -- ── OPTIONAL HARDENING: Row-Level Security ────────────────────────────
 -- Filtering by user_id in every query is sufficient for the single-writer skill
