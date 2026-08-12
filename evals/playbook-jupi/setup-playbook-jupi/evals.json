@@ -1,0 +1,6 @@
+{
+  "skill_name": "setup-playbook-jupi",
+  "_isolation": "See evals/README.md + evals/playbook-jupi/README.md. Scratch workspace + synthetic jupiUserId; the playbook store and reporting-spreadsheet fixtures must be fictional and live in the test tools, never the owner's real Notion/Sheet.",
+  "_status": "scaffold (TECH-477) — cases land with the bootstrap/extraction skill (design §11 items 2, 12)",
+  "evals": []
+}

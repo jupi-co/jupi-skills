@@ -1,0 +1,6 @@
+{
+  "skill_name": "refresh-backlog (playbook-jupi)",
+  "_isolation": "See evals/README.md — Neon eval: prefix + synthetic jupiUserId + is_eval cursors; read-only on tools. Fixture dossiers and inbound must be fictional.",
+  "_status": "scaffold (TECH-477) — cases land with the inbound-watch rewrite (design §11 items 5, 12)",
+  "evals": []
+}

@@ -1,0 +1,6 @@
+{
+  "skill_name": "act-or-decide (playbook-jupi)",
+  "_isolation": "See evals/README.md — prefer --dry-run cases (write nothing); Jupi test workspace via the scratch config's jupiWorkspace; never perform mode; fixture dossiers/playbook fictional.",
+  "_status": "scaffold (TECH-477) — cases land with the planner rewrite (design §11 items 4, 12)",
+  "evals": []
+}

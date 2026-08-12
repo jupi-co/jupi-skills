@@ -193,6 +193,12 @@ plugins/proactive-jupi/
   shared/                              db.mjs, schema.sql, apply-schema.mjs, ensure-deps.sh
   skills/                              refresh-backlog, update-brain, act-or-decide,
                                        act-post-decision, execute-action, setup-proactive-jupi
+plugins/playbook-jupi/                 closed-world fork of proactive-jupi (scaffold: the three
+                                       rewritten skills are explicit-invoke skeletons until their
+                                       rewrites land). shared/ db.mjs + ensure-deps.sh stay
+                                       byte-identical with proactive-jupi — CI-enforced;
+                                       execute-action, act-post-decision, update-brain are synced
+                                       copies (marker in each SKILL.md)
 tools/                                 validate-plugin.sh, package-plugin.sh, install-hooks.sh, …
 evals/                                 skill eval suites (run-eval.sh, seed-scratch.mjs)
 .githooks/post-commit                  validates + rebuilds dist/ zips on commit (opt-in via tools/install-hooks.sh)

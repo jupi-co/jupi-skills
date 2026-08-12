@@ -25,6 +25,16 @@ EVAL_DIR="$ROOT/evals/$SKILL"
 [[ -d "$EVAL_DIR" ]] || { echo "no eval set at $EVAL_DIR" >&2; exit 2; }
 WS="$EVAL_DIR/workspace/iteration-$ITER"
 
+# Root-level sets (historical) belong to proactive-jupi; other plugins' sets are
+# nested as evals/<plugin>/<skill> (e.g. playbook-jupi/act-or-decide), so the
+# plugin whose SKILL.md the trigger commands score comes from the eval path.
+if [[ "$SKILL" == */* ]]; then
+  SKILL_PLUGIN="${SKILL%%/*}"; SKILL_NAME="${SKILL##*/}"
+else
+  SKILL_PLUGIN="proactive-jupi"; SKILL_NAME="$SKILL"
+fi
+SKILL_PATH="$ROOT/plugins/$SKILL_PLUGIN/skills/$SKILL_NAME"
+
 find_skill_creator() {
   if [[ -n "${SKILL_CREATOR_DIR:-}" ]]; then echo "$SKILL_CREATOR_DIR"; return; fi
   # The plugin ships skill-creator under a session-scoped path; take the newest.
@@ -121,12 +131,12 @@ PY
     if [[ "$CMD" == measure ]]; then
       ( cd "$SC" && python3 -m scripts.run_eval \
           --eval-set "$EVAL_DIR/trigger-eval.json" \
-          --skill-path "$ROOT/plugins/proactive-jupi/skills/$SKILL" \
+          --skill-path "$SKILL_PATH" \
           --model "${EVAL_MODEL:-claude-opus-5}" --runs-per-query "${RUNS:-3}" --verbose )
     else
       ( cd "$SC" && python3 -m scripts.run_loop \
           --eval-set "$EVAL_DIR/trigger-eval.json" \
-          --skill-path "$ROOT/plugins/proactive-jupi/skills/$SKILL" \
+          --skill-path "$SKILL_PATH" \
           --model "${EVAL_MODEL:-claude-opus-5}" --max-iterations 5 --verbose )
     fi
     ;;

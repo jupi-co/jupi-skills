@@ -10,6 +10,19 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - name: shared/ parity (playbook-jupi is a fork of proactive-jupi)
+        # Fork policy (playbook-jupi design §1): db.mjs and ensure-deps.sh stay
+        # byte-identical across the two plugins. Edit the proactive-jupi copy,
+        # then re-copy — never patch the playbook-jupi side alone.
+        run: |
+          for f in db.mjs ensure-deps.sh; do
+            if ! cmp -s "plugins/proactive-jupi/shared/$f" "plugins/playbook-jupi/shared/$f"; then
+              echo "::error file=plugins/playbook-jupi/shared/$f::shared/$f has drifted between proactive-jupi and playbook-jupi — the fork policy requires byte-identical copies. Edit plugins/proactive-jupi/shared/$f, then re-copy."
+              diff "plugins/proactive-jupi/shared/$f" "plugins/playbook-jupi/shared/$f" || true
+              exit 1
+            fi
+          done
+          echo "shared/ parity OK (db.mjs, ensure-deps.sh)"
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
