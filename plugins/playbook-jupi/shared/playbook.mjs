@@ -32,13 +32,23 @@
 //   pb-set-status   <id> <status>            → { id, status, version }
 //       (→ 'validated' bumps version — re-validation is vN+1, §6)
 //   pb-add-evidence <id> <evidence|counter>  → { id, evidence_count, counter_evidence_count }
-//   ── dossiers (TECH-485) ──
+//   ── the declared lifecycle (playbook content, never an engine enum) ──
+//   pb-declare-stages '<json array>' [provenance]  → { id, status, version, applied }
+//       Writes the reserved 'lifecycle-stages' entry — the ordered stage list the
+//       workspace's dossiers traverse. Playbook CONTENT: the engine ships no
+//       lifecycle of its own. Same write-side protection as any entry (an
+//       owner-validated lifecycle is not overwritten by a re-declaration).
+//   pb-get-stages                            → { stages, status, version } | null
+//   ── dossiers (TECH-485): the playbook's TRACKED ITEMS ──
 //   pb-create-dossier '<json>'               → { id, prior_stage, stage }
-//       json: account (required), insurer?, broker?, contact_name?,
-//             contact_title?, contact_email?, notes?, stage? (default 'to-qualify')
-//       One tasks row per account (signal_type='dossier', stable signal_ref);
+//       json: label (required — the item's human name), attrs? (free key/value
+//             object, rendered into the summary), notes?, stage? (must be in the
+//             declared lifecycle; default = its first stage, or NULL when no
+//             lifecycle is declared yet)
+//       One tasks row per label (signal_type='dossier', stable signal_ref);
 //       idempotent — re-seeding refreshes the summary but never resets stage.
 //   pb-set-stage    <task_id> <stage> [detail]  → { id, stage, stage_detail }
+//       (requires a declared lifecycle; stage must be in it)
 //   pb-list-dossiers [--stage <s>]           → [ {dossier}, … ]
 //
 // Config resolution — same walk as db.mjs, one difference: this plugin's home
@@ -55,16 +65,16 @@ import { readFileSync, existsSync } from "node:fs";
 import { dirname, join, resolve } from "node:path";
 import { pathToFileURL } from "node:url";
 
-export const STAGES = [
-  "to-qualify",
-  "contact-identified",
-  "sequence-running",
-  "reply-to-handle",
-  "call-booked",
-  "phone-fallback",
-];
 export const ENTRY_STATUSES = ["inferred", "declared", "validated", "suspended"];
 export const ANSWER_KINDS = ["rule", "always_ask", "delegated"];
+
+// The one point_id the engine reserves: the workspace's declared lifecycle —
+// the ordered stage list its dossiers traverse. It is an ordinary playbook
+// entry (extraction/bootstrap writes it, the owner validates it, the same
+// write-side protection applies); reserving the id is what lets the stage
+// verbs find it. The engine ships NO stage list of its own — a lifecycle is
+// playbook content, like everything else the owner's documents define.
+export const LIFECYCLE_POINT_ID = "lifecycle-stages";
 
 const clean = (v) => (v && !String(v).includes("<") ? v : null);
 
@@ -159,30 +169,57 @@ async function withRetry(fn) {
   throw last;
 }
 
-// Stable dossier ref from the account name: lowercase, runs of non-alphanumerics
+// Stable dossier ref from the item's label: lowercase, runs of non-alphanumerics
 // → '-'. Same rule as db.mjs's decision slugifier so there is one convention.
-export function dossierRef(account) {
-  const slug = String(account ?? "")
+export function dossierRef(label) {
+  const slug = String(label ?? "")
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "-")
     .replace(/-+/g, "-")
     .replace(/^-|-$/g, "");
-  if (!slug) throw new Error("pb-create-dossier: `account` must yield a non-empty slug");
+  if (!slug) throw new Error("pb-create-dossier: `label` must yield a non-empty slug");
   return `dossier:${slug}`;
 }
 
-// One readable line per known attribute. The attrs deliberately live in the
-// summary TEXT (`key: value` lines) — TECH-485 is a column and verbs, no new
-// table; whether broker/insurer earn structured columns is the planner
-// ticket's call (it is the consumer that would read them).
+// One readable line per attribute. The engine does not know what the keys mean
+// — attrs are the PLAYBOOK's vocabulary (an outreach pilot passes insurer/
+// broker/contact; a hiring playbook passes role/source; …). They deliberately
+// live in the summary TEXT (`key: value` lines) — TECH-485 is a column and
+// verbs, no new table; whether any attr earns a structured column is the
+// planner ticket's call (it is the consumer that would read them).
 function dossierSummary(d) {
-  const lines = [`Account dossier — ${d.account}.`];
-  if (d.insurer) lines.push(`insurer: ${d.insurer}`);
-  if (d.broker) lines.push(`broker: ${d.broker}`);
-  const contact = [d.contact_name, d.contact_title, d.contact_email].filter(Boolean).join(" · ");
-  if (contact) lines.push(`contact: ${contact}`);
+  const lines = [`Dossier — ${d.label}.`];
+  const attrs = d.attrs ?? {};
+  if (typeof attrs !== "object" || Array.isArray(attrs))
+    throw new Error("pb-create-dossier: `attrs` must be a plain object of key/values");
+  for (const [k, v] of Object.entries(attrs)) {
+    if (v != null && String(v).trim() !== "") lines.push(`${k}: ${v}`);
+  }
   if (d.notes) lines.push(`notes: ${d.notes}`);
   return lines.join("\n");
+}
+
+// The declared lifecycle, or null when the playbook hasn't declared one.
+// Reads the reserved entry at ANY status — declaring is enough to make stages
+// usable (validation upgrades its authority, not its existence); a SUSPENDED
+// lifecycle stays readable too, since dossiers already sitting in its stages
+// don't evaporate when the owner questions the list.
+async function declaredStages(sql, userId) {
+  const rows = await sql.query(
+    `select answer from playbook_entries
+      where user_id = $1 and point_id = $2 and scope_key = 'global' and answer is not null`,
+    [userId, LIFECYCLE_POINT_ID],
+  );
+  if (!rows[0]) return null;
+  let stages;
+  try {
+    stages = JSON.parse(rows[0].answer);
+  } catch {
+    throw new Error(`the '${LIFECYCLE_POINT_ID}' entry's answer is not a JSON array — re-declare with pb-declare-stages`);
+  }
+  if (!Array.isArray(stages) || stages.length === 0 || stages.some((s) => typeof s !== "string" || !s.trim()))
+    throw new Error(`the '${LIFECYCLE_POINT_ID}' entry must be a non-empty JSON array of stage names — re-declare with pb-declare-stages`);
+  return stages;
 }
 
 // Minimal `--flag value` parser for the list verbs. Unknown flags error loudly —
@@ -330,41 +367,100 @@ export const VERBS = {
     return rows[0] ?? { id: null, error: "no such playbook entry for this user" };
   },
 
+  // ── the declared lifecycle ───────────────────────────────────────────────
+  // Declare (or re-declare) the workspace's lifecycle — the ordered stage list
+  // its dossiers traverse. Routed through pb-upsert-entry, so it inherits the
+  // write-side protection: once the owner VALIDATES the lifecycle, a
+  // re-declaration is refused like any other extraction write.
+  async "pb-declare-stages"(sql, [jsonArg, provenance], userId) {
+    let stages;
+    try {
+      stages = JSON.parse(jsonArg);
+    } catch {
+      throw new Error(`pb-declare-stages: pass a JSON array of stage names, e.g. '["intake","in-review","closed"]'`);
+    }
+    if (!Array.isArray(stages) || stages.length === 0 || stages.some((s) => typeof s !== "string" || !s.trim()))
+      throw new Error("pb-declare-stages: the array must be non-empty strings");
+    if (new Set(stages).size !== stages.length)
+      throw new Error("pb-declare-stages: stage names must be unique");
+    return VERBS["pb-upsert-entry"](
+      sql,
+      [
+        JSON.stringify({
+          point_id: LIFECYCLE_POINT_ID,
+          scope_key: "global",
+          question: "what lifecycle do this playbook's dossiers traverse?",
+          scope_axis: "global",
+          answer: JSON.stringify(stages),
+          status: "declared",
+          provenance: provenance ?? null,
+        }),
+      ],
+      userId,
+    );
+  },
+
+  async "pb-get-stages"(sql, [], userId) {
+    const stages = await declaredStages(sql, userId);
+    if (!stages) return null;
+    const rows = await sql.query(
+      `select status, version from playbook_entries
+        where user_id = $1 and point_id = $2 and scope_key = 'global'`,
+      [userId, LIFECYCLE_POINT_ID],
+    );
+    return { stages, status: rows[0]?.status, version: rows[0]?.version };
+  },
+
   // ── dossiers ─────────────────────────────────────────────────────────────
-  // One long-lived tasks row per account (design §8). Idempotent on the account:
-  // re-running a seed refreshes the descriptive summary but never resets a
-  // dossier's stage or status — progress belongs to the funnel, not the seed.
+  // One long-lived tasks row per tracked item (design §8). Idempotent on the
+  // label: re-running a seed refreshes the descriptive summary but never resets
+  // a dossier's stage or status — progress belongs to the lifecycle, not the
+  // seed. With no declared lifecycle the dossier is created unstaged (NULL) —
+  // the engine never invents a frame the playbook didn't declare.
   async "pb-create-dossier"(sql, [jsonArg], userId) {
     const d = JSON.parse(jsonArg);
-    if (!d.account) throw new Error("pb-create-dossier: `account` is required");
-    const stage = d.stage ?? "to-qualify";
-    if (!STAGES.includes(stage))
-      throw new Error(`pb-create-dossier: stage must be one of ${STAGES.join("|")}, got '${stage}'`);
+    if (!d.account && !d.label)
+      throw new Error("pb-create-dossier: `label` is required (the tracked item's human name)");
+    if (d.account) throw new Error("pb-create-dossier: `account` was renamed `label` — attrs carry any domain fields");
+    const stages = await declaredStages(sql, userId);
+    let stage = d.stage ?? null;
+    if (stage != null) {
+      if (!stages)
+        throw new Error("pb-create-dossier: no lifecycle declared — pb-declare-stages first, or omit `stage`");
+      if (!stages.includes(stage))
+        throw new Error(`pb-create-dossier: stage must be one of ${stages.join("|")} (the declared lifecycle), got '${stage}'`);
+    } else if (stages) {
+      stage = stages[0]; // a new tracked item enters at the lifecycle's first stage
+    }
     const rows = await sql.query(
       `with prior as (
          select stage from tasks where user_id = $1 and signal_type = 'dossier' and signal_ref = $2
        )
        insert into tasks (user_id, signal_type, signal_ref, short_label, summary,
                           status, external, stage, stage_updated_at)
-       values ($1, 'dossier', $2, $3, $4, 'open', true, $5, now())
+       values ($1, 'dossier', $2, $3, $4, 'open', true, $5,
+               case when $5::text is null then null else now() end)
        on conflict (user_id, signal_type, signal_ref) do update
          set short_label = excluded.short_label,
              summary     = excluded.summary,
              updated_at  = now()
        returning id, stage, (select stage from prior) as prior_stage`,
-      [userId, dossierRef(d.account), d.account, dossierSummary(d), stage],
+      [userId, dossierRef(d.label), d.label, dossierSummary(d), stage],
     );
     const r = rows[0];
     return { id: r.id, prior_stage: r.prior_stage ?? null, stage: r.stage };
   },
 
-  // Move a dossier along the funnel. Guarded to dossier rows — staging an
-  // ordinary task is a bug, not a feature. `detail` replaces (or clears) the
-  // free-detail field on every transition: it describes THIS stage (the mail
-  // index while sequence-running), so carrying it across stages would lie.
+  // Move a dossier along the declared lifecycle. Guarded to dossier rows —
+  // staging an ordinary task is a bug, not a feature. `detail` replaces (or
+  // clears) the free-detail field on every transition: it describes THIS stage
+  // (a sequence's current step index), so carrying it across stages would lie.
   async "pb-set-stage"(sql, [taskId, stage, detail], userId) {
-    if (!STAGES.includes(stage))
-      throw new Error(`pb-set-stage: stage must be one of ${STAGES.join("|")}, got '${stage}'`);
+    const stages = await declaredStages(sql, userId);
+    if (!stages)
+      throw new Error("pb-set-stage: no lifecycle declared for this workspace — pb-declare-stages first (the stage list is playbook content, not an engine constant)");
+    if (!stages.includes(stage))
+      throw new Error(`pb-set-stage: stage must be one of ${stages.join("|")} (the declared lifecycle), got '${stage}'`);
     const rows = await sql.query(
       `update tasks
           set stage = $3, stage_detail = $4, stage_updated_at = now(), updated_at = now()
@@ -375,15 +471,15 @@ export const VERBS = {
     return rows[0] ?? { id: null, error: "no such dossier for this user (pb-set-stage only moves signal_type='dossier' rows)" };
   },
 
-  // The funnel read: this tenant's dossiers, optionally at one stage. Carries
-  // status + gating_decision_ids so the caller sees blocked-ness without a
-  // second query; ordered by account for a stable listing.
+  // The lifecycle read: this tenant's dossiers, optionally at one stage.
+  // Carries status + gating_decision_ids so the caller sees blocked-ness
+  // without a second query; ordered by label for a stable listing. The --stage
+  // filter is permissive on purpose (filtering is a read, not a write — an
+  // undeclared value just returns the empty set).
   async "pb-list-dossiers"(sql, args, userId) {
     const f = parseFlags(args, ["stage"]);
-    if (f.stage && !STAGES.includes(f.stage))
-      throw new Error(`--stage must be one of ${STAGES.join("|")}, got '${f.stage}'`);
     return sql.query(
-      `select id, short_label as account, stage, stage_detail, stage_updated_at,
+      `select id, short_label as label, stage, stage_detail, stage_updated_at,
               status, gating_decision_ids, summary, signal_ref, updated_at
          from tasks
         where user_id = $1 and signal_type = 'dossier'

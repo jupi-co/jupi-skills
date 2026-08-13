@@ -6,8 +6,8 @@
 -- ensure-deps.sh. Playbook-specific state (playbook_entries, the dossier stage
 -- on tasks) lives here and in shared/playbook.mjs, never in db.mjs.
 --
--- Six tables: TASKS (the backlog — and, in this plugin, the account DOSSIERS)
--- · ACTIONS (units of execution) · CRAWL_STATE (incremental cursors, shared
+-- Six tables: TASKS (the backlog — and, in this plugin, the DOSSIERS: the
+-- playbook's tracked items) · ACTIONS (units of execution) · CRAWL_STATE (incremental cursors, shared
 -- with update-brain) · CRAWL_FRONTIER (the queue of things worth looking up,
 -- pushed by whoever trips over them) · ROUTINE_RUNS (did the scheduled routine
 -- run? — the one thing a routine writes about itself) · PLAYBOOK_ENTRIES (the
@@ -63,16 +63,22 @@ create table if not exists tasks (
   relevant_facts  jsonb not null default '[]',         -- [{summary, source}] — light Supermemory recall refs (read-only; update-brain owns writes)
   open_questions  jsonb not null default '[]',         -- [{uncertainty_pct, description}] — candidate decisions
   gating_decision_ids uuid[] not null default '{}',    -- Jupi decision ids this task's actions wait on; the poll fetches these
-  -- ── Dossier model (playbook-jupi) — design §8. One account = one long-lived
-  -- tasks row traversing the funnel. NULL stage = an ordinary (non-dossier) task;
-  -- dossier rows carry signal_type='dossier' and a stable signal_ref, so the
-  -- existing blocked/unblock machinery (status + gating_decision_ids) applies to
-  -- them unchanged. Priority is DERIVED from stage by the planner (waiting reply
-  -- > due follow-up > nothing) — proactive's scoring model is not ported.
-  stage           text check (stage is null or stage in
-                    ('to-qualify','contact-identified','sequence-running',
-                     'reply-to-handle','call-booked','phone-fallback')),
-  stage_detail    text,                                 -- minimal free detail (e.g. current mail index while sequence-running)
+  -- ── Dossier model (playbook-jupi) — design §8. A dossier is the playbook's
+  -- TRACKED ITEM: one long-lived tasks row traversing a declared lifecycle (for
+  -- an outreach pilot that's an account moving through a funnel; for another
+  -- playbook it's a candidate, a contract, a ticket…). NULL stage = an ordinary
+  -- (non-dossier) task, or a dossier whose playbook hasn't declared a lifecycle
+  -- yet. Dossier rows carry signal_type='dossier' and a stable signal_ref, so
+  -- the existing blocked/unblock machinery (status + gating_decision_ids)
+  -- applies to them unchanged. Priority is DERIVED from stage by the planner —
+  -- proactive's scoring model is not ported.
+  --
+  -- Deliberately NO enum here: the valid stage list is PLAYBOOK CONTENT — the
+  -- workspace's reserved 'lifecycle-stages' entry (see playbook-contract.md),
+  -- enforced by playbook.mjs against the declared list. The engine has no
+  -- lifecycle of its own.
+  stage           text,
+  stage_detail    text,                                 -- stage-local free detail (e.g. a sequence's current step index)
   stage_updated_at timestamptz,                         -- when the dossier last moved stage
   created_at      timestamptz not null default now(),
   updated_at      timestamptz not null default now(),
@@ -367,16 +373,15 @@ alter table tasks add  constraint tasks_parse_confidence_check
 -- v5 (playbook-jupi fork): the dossier model — design §8. Carries the stage
 -- columns to a database created before this fork (the shared project already
 -- running proactive's schema is exactly this case). Nullable, so existing
--- non-dossier tasks are untouched; the CHECK is added via drop + re-add (same
--- widen pattern as v3) so re-runs are no-ops.
+-- non-dossier tasks are untouched.
 alter table tasks add column if not exists stage text;
 alter table tasks add column if not exists stage_detail text;
 alter table tasks add column if not exists stage_updated_at timestamptz;
+-- A stage enum briefly shipped as a CHECK during development; the valid list is
+-- playbook CONTENT (the workspace's 'lifecycle-stages' entry), so the constraint
+-- is dropped and never re-added — playbook.mjs enforces against the declared
+-- list, the schema stays lifecycle-agnostic.
 alter table tasks drop constraint if exists tasks_stage_check;
-alter table tasks add  constraint tasks_stage_check
-  check (stage is null or stage in
-         ('to-qualify','contact-identified','sequence-running',
-          'reply-to-handle','call-booked','phone-fallback'));
 -- The dossier read shape: this tenant's dossiers, optionally at one stage.
 -- Partial: ordinary tasks (stage null) stay out of the index entirely.
 create index if not exists tasks_user_stage_idx
