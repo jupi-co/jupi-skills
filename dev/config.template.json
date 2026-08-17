@@ -4,7 +4,7 @@
   "jupiWorkspace": "test",
   "_jupiUserId": "the tenant key stamped on every Neon row — the row-level isolation. The bench uses a synthetic id on the SHARED project; dev/seed.mjs and dev/reset.mjs refuse to run under any tenant not prefixed 'dev-' or 'eval-'",
   "jupiUserId": "dev-mirror",
-  "_neonConnString": "project-scoped Neon connection string (same project as the internal install — the tenant key separates rows, nothing new to provision). Ask the project owner; lives only in this local file or $NEON_CONN_STRING",
+  "_neonConnString": "project-scoped Neon connection string of the SEPARATE dev project (decided Aug 17: an empty dedicated project, so even a misfilled config physically cannot reach real data — the July 28 eval incident class). The tenant key + guards stay as defense in depth. Lives only in this local file or $NEON_CONN_STRING",
   "neonConnString": "<neon-conn-string>",
   "_watchedSource": "the inbound source the watch reads — a generic engine-facing key (the inbound-watch rewrite owns its final shape); THIS bench's instance is a mailbox: the fake operator's dev Gmail (see dev/mirror/README.md, 'Léa Marchal'). The real address is deliberately NOT in the repo: fill it here locally",
   "watchedSource": "<dev-mailbox>@gmail.com",

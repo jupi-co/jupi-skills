@@ -10,7 +10,7 @@ README's cast and zero-real-entities rule first.
 
 | Layer | Mechanism |
 |---|---|
-| Neon rows | Synthetic tenant **`dev-mirror`** on the shared project — `user_id` is the row-level boundary; every verb filters by it. `seed`/`reset` **refuse any tenant not prefixed `dev-`/`eval-`** (guard inside the core functions, not just the CLI) |
+| Neon | A **separate, empty dev project** (decided Aug 17 — physical isolation, so even a misfilled config cannot reach real data; create it in the Neon console, e.g. `playbook-dev`). On top of it, the synthetic tenant **`dev-mirror`** as defense in depth — every verb filters by `user_id`, and `seed`/`reset` **refuse any tenant not prefixed `dev-`/`eval-`** (guard inside the core functions, not just the CLI). NOT a Neon branch: a branch copies the parent's real data into the dev environment, which defeats the point |
 | Jupi decisions | Workspace **`test`** only (from config `jupiWorkspace`) — never a real workspace |
 | Outbound mail | Every fixture address is **`.example`** (RFC-reserved, unresolvable) — even a mistaken real send goes nowhere; and V1 is draft-gated anyway |
 | Secrets & identities | The Neon string and the **dev mailbox address live only in your local gitignored config** (`.playbook-jupi/`); the repo carries placeholders. Nothing derived from real pilot data ever lands in this repo |
@@ -41,8 +41,7 @@ bash plugins/playbook-jupi/shared/ensure-deps.sh
 node plugins/playbook-jupi/shared/apply-schema.mjs
 ```
 
-First time only — idempotent and additive (the shared project gains `playbook_entries` + the stage
-columns; existing rows untouched). Then:
+First time only — a fresh apply on the empty dev project (idempotent; safe to re-run anytime). Then:
 
 ```bash
 node dev/seed.mjs
