@@ -1,12 +1,14 @@
 ---
 name: setup-playbook-jupi
 description: >-
-  Bootstrap (cold-start) a Playbook-Jupi workspace — the one-time setup for a closed-world funnel.
-  Creates the playbook store (a new Notion process page, owner-editable), creates the fixed account
-  dossiers from the owner's reporting spreadsheet, and runs the playbook extraction over the owner's
-  own documents — inferred/declared entries plus declared holes, none of it pre-authorized. Run once
-  per workspace (re-runnable to refresh). Not for: running the funnel (act-or-decide), watching inbound
-  (refresh-backlog), or setting up an open-world proactive-jupi workspace (setup-proactive-jupi).
+  Bootstrap (cold-start) a Playbook-Jupi workspace — the one-time setup that turns the owner's declared
+  process into the run's frame. Creates the playbook store (a new Notion process page, owner-editable),
+  creates the playbook's tracked dossiers from the owner's declared source (for a sales pilot: accounts
+  from a reporting spreadsheet), and runs the playbook extraction over the owner's own documents —
+  lifecycle, decision points, inferred/declared entries plus declared holes, none of it pre-authorized.
+  Run once per workspace (re-runnable to refresh). Not for: running the process (act-or-decide),
+  watching inbound (refresh-backlog), or setting up an open-world proactive-jupi workspace
+  (setup-proactive-jupi).
 disable-model-invocation: true
 ---
 
@@ -16,11 +18,12 @@ disable-model-invocation: true
 > bodies TODO. If invoked, say exactly that and stop — do not improvise a bootstrap from the headings.
 > Bodies land with the bootstrap/extraction ticket (build plan §11, item 2).
 
-Playbook-Jupi runs a **declared process**: fixed account dossiers traverse a funnel defined by a
-co-constructed playbook; every hole in the playbook surfaces as a Jupi decision; validated decisions
-become rules. **The playbook is the prior, decisions are the evidence, rules are the posterior** (design
-§1). This skill takes a workspace from zero to **ready to run the funnel**: store connected, dossiers
-created, playbook extracted — mostly declared ignorance on day 1, and that is the point (§2).
+Playbook-Jupi runs a **declared process**: the user's playbook defines the frame — what is in scope,
+which dossiers are tracked, and the lifecycle they traverse; every hole in the playbook surfaces as a
+Jupi decision; validated decisions become rules. **The playbook is the prior, decisions are the
+evidence, rules are the posterior** (design §1). This skill takes a workspace from zero to **ready to
+run the process**: store connected, dossiers created, playbook extracted — mostly declared ignorance on
+day 1, and that is the point (§2).
 
 Fork note: sibling of `setup-proactive-jupi`, rewritten for the closed world. The Neon schema apply and
 the `shared/` helpers (`db.mjs`, `ensure-deps.sh`, `apply-schema.mjs`) are reused as-is (§11).
@@ -40,16 +43,19 @@ states) · §2 Decision points & rules (the heart: id · question · scope · cu
 established" · status · evidence) · §3 Assets · §4 Vigilance rules (tripwires) · §5 Never-seen /
 out-of-scope log · §6 Changelog (generated from decisions).
 
-## Create the account dossiers from the owner's reporting spreadsheet (§8)
+## Create the dossiers from the owner's declared source (§8)
 
-TODO. The unit of work is the **account dossier** — a long-lived object traversing funnel stages, read
-from the owner's reporting spreadsheet (the closed world: exactly the pilot's accounts, no discovery).
-Minimal V1 per design: one Neon `tasks` row per account plus a `stage` field — the dossier model and
-its `db.mjs` verbs land in their own ticket (§11, item 3).
+TODO. The unit of work is the **dossier** — the playbook's tracked item, a long-lived object traversing
+the declared lifecycle. What the items are and where they come from is the owner's declaration (the
+closed world: exactly the declared set, no discovery) — for the pilot, accounts read from a reporting
+spreadsheet. Minimal V1 per design: one Neon `tasks` row per item (`pb-create-dossier {label, attrs}`
+— the source's columns become attrs; `shared/playbook.mjs`, §11 item 3).
 
 ## Run the playbook extraction (§2–§4)
 
-TODO. Extract the playbook from the owner's own documents into the store: the funnel skeleton, the
+TODO. Extract the playbook from the owner's own documents into the store: the **lifecycle** (the stage
+list the dossiers traverse — written as the reserved `lifecycle-stages` entry via `pb-declare-stages`;
+the engine ships no lifecycle of its own), the
 **decision points** (each with a stable id and a declared scope axis), and entries by provenance —
 `inferred` (LLM-derived from sparse sources) vs `declared` (extracted verbatim and unambiguously from
 the owner's doc) (§3). An unanswered point reads **"not established — I will ask every time"** (§2).

@@ -20,7 +20,7 @@
     {
       "name": "playbook-jupi",
       "source": "./plugins/playbook-jupi",
-      "description": "Playbook-Jupi closed-world playbook engine (fork of proactive-jupi) — fixed account dossiers traverse a funnel defined by a co-constructed playbook; holes in the playbook surface as ready-to-settle Jupi decisions; validated decisions become rules that graduate steps from ask-every-time to act. Includes a bootstrap skill that creates the playbook store and dossiers and runs the extraction."
+      "description": "Playbook-Jupi closed-world playbook engine (fork of proactive-jupi) — the user's playbook defines the frame: what is in scope, which dossiers are tracked, and the lifecycle they traverse; holes in the playbook surface as ready-to-settle Jupi decisions; validated decisions become rules that graduate steps from ask-every-time to act. Includes a bootstrap skill that creates the playbook store and dossiers and runs the extraction."
     }
   ]
 }

@@ -1,10 +1,10 @@
 {
   "name": "playbook-jupi",
-  "description": "Playbook-Jupi — closed-world playbook engine, forked from proactive-jupi. Runs a declared process: fixed account dossiers traverse a funnel defined by a co-constructed playbook; every hole in the playbook surfaces as a ready-to-settle Jupi decision; validated decisions become rules that graduate steps from ask-every-time to act (draft-gated). Includes a bootstrap skill that creates the playbook store, the dossiers, and runs the playbook extraction.",
+  "description": "Playbook-Jupi — closed-world playbook engine, forked from proactive-jupi. Runs a declared process: the user's playbook defines the frame — what is in scope, which dossiers are tracked, and the lifecycle they traverse; every hole in the playbook surfaces as a ready-to-settle Jupi decision; validated decisions become rules that graduate steps from ask-every-time to act (draft-gated). Includes a bootstrap skill that creates the playbook store, the dossiers, and runs the playbook extraction.",
   "author": { "name": "Jupi", "email": "a@jupi.co" },
   "homepage": "https://github.com/jupi-co/jupi-skills",
   "license": "MIT",
-  "keywords": ["jupi", "decisions", "automation", "playbook", "funnel", "mcp", "agent"],
+  "keywords": ["jupi", "decisions", "automation", "playbook", "process", "mcp", "agent"],
   "dependencies": [
     { "name": "jupi-skills", "marketplace": "jupi-skills" }
   ]
