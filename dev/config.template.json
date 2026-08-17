@@ -6,10 +6,10 @@
   "jupiUserId": "dev-mirror",
   "_neonConnString": "project-scoped Neon connection string (same project as the internal install — the tenant key separates rows, nothing new to provision). Ask the project owner; lives only in this local file or $NEON_CONN_STRING",
   "neonConnString": "<neon-conn-string>",
-  "_watchedMailbox": "the dev Gmail the bench watches — the fake operator's mailbox (see dev/mirror/README.md, 'Léa Marchal'). The real address is deliberately NOT in the repo: fill it here locally",
-  "watchedMailbox": "<dev-mailbox>@gmail.com",
-  "_accountsSource": "where the seed reads the tracked items from — the pilot mirror's fake reporting sheet",
-  "accountsSource": "dev/mirror/accounts.csv",
+  "_watchedSource": "the inbound source the watch reads — a generic engine-facing key (the inbound-watch rewrite owns its final shape); THIS bench's instance is a mailbox: the fake operator's dev Gmail (see dev/mirror/README.md, 'Léa Marchal'). The real address is deliberately NOT in the repo: fill it here locally",
+  "watchedSource": "<dev-mailbox>@gmail.com",
+  "_dossierSource": "where the tracked dossiers are read from — a generic engine-facing key (the bootstrap will read it); THIS bench's instance is the pilot mirror's fake reporting sheet",
+  "dossierSource": "dev/mirror/accounts.csv",
   "_projectionTarget": "where the human-readable playbook projection lands on the bench — a local file standing in for the real store (hybrid tier 1: Sheet/Notion as local files)",
   "projectionTarget": ".playbook-jupi/playbook.local.md"
 }

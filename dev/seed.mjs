@@ -56,7 +56,7 @@ export async function seed(sql, userId, { csvPath, stages = PILOT_STAGES, proven
 async function main() {
   const { connString, userId, cfg } = resolveBenchConfig();
   const sql = await neonSql(connString);
-  const csvPath = join(REPO_ROOT, cfg.accountsSource || "dev/mirror/accounts.csv");
+  const csvPath = join(REPO_ROOT, cfg.dossierSource || "dev/mirror/accounts.csv");
   const out = await seed(sql, userId, { csvPath });
   const lc = out.lifecycle;
   console.log(
