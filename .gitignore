@@ -15,6 +15,12 @@ __pycache__/
 .proactive-jupi/*.local.json
 .proactive-jupi/.env
 
+# playbook-jupi: bench/instance state & secrets (config, local playbook
+# projection, run scratch) — never commit any of it. The committed template is
+# dev/config.template.json and must never hold a real value; the dev mailbox
+# address and the Neon string exist ONLY in the local copy.
+.playbook-jupi/
+
 # proactive-jupi: shared/ runtime deps (installed at runtime by ensure-deps.sh, not vendored)
 node_modules/
 package-lock.json
