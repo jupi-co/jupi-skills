@@ -96,6 +96,13 @@ explicit `pb-set-status` (suspension, §6).
   never resets `stage` or `status` — lifecycle progress belongs to the lifecycle.
 - `stage_detail` is stage-local free detail (a sequence's current step index); `pb-set-stage`
   replaces it on every transition so it can't lie across stages.
+- **Attaching inbound** (`pb-attach-signal`) is the inbound watch's single write: the signal's
+  permalink lands in `signal_url` (the dossier's *current* signal), the match certainty in
+  `parse_confidence`, and the stage move it causes travels with it (validated against the declared
+  lifecycle; the attached thread/message id becomes `stage_detail` — at an "inbound to handle"
+  stage, the detail IS which thread to handle). The dossier's `signal_ref` is its identity key and
+  never changes; the watch stores **pointers, never bodies** — the planner re-reads the thread from
+  the source at plan time.
 - **Priority is derived, never stored**: the planner ranks from stage. Dossier rows carry no score;
   proactive's scoring model is not ported.
 - **A playbook without tracked items is legitimate**: it runs on ordinary transient tasks plus

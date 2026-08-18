@@ -49,6 +49,13 @@
 //       idempotent — re-seeding refreshes the summary but never resets stage.
 //   pb-set-stage    <task_id> <stage> [detail]  → { id, stage, stage_detail }
 //       (requires a declared lifecycle; stage must be in it)
+//   pb-attach-signal <task_id> '<json>'      → { id, stage, stage_detail, signal_url, parse_confidence }
+//       json: signal_url?, parse_confidence? ('low'|'medium'|'high'), stage?
+//             (validated against the declared lifecycle), stage_detail? (the
+//             attached thread/message id — written only when stage moves)
+//       The inbound watch's one write: attach an observed signal to a dossier
+//       in a single guarded update. The dossier's signal_ref (its identity
+//       key) never changes; the watch stores pointers, never bodies.
 //   pb-list-dossiers [--stage <s>]           → [ {dossier}, … ]
 //
 // Config resolution — same walk as db.mjs, one difference: this plugin's home
@@ -469,6 +476,39 @@ export const VERBS = {
       [taskId, userId, stage, detail ?? null],
     );
     return rows[0] ?? { id: null, error: "no such dossier for this user (pb-set-stage only moves signal_type='dossier' rows)" };
+  },
+
+  // Attach an observed inbound signal to a dossier — the inbound watch's one
+  // write, in one guarded update: the signal's permalink, the match certainty
+  // (parse_confidence), and optionally the stage move it causes (validated
+  // against the declared lifecycle; stage_detail — the thread/message id —
+  // replaced only when the stage moves, same semantics as pb-set-stage). The
+  // dossier's signal_ref is its identity key and never changes; the planner
+  // re-reads the thread from the source at plan time.
+  async "pb-attach-signal"(sql, [taskId, jsonArg], userId) {
+    const a = JSON.parse(jsonArg);
+    if (a.parse_confidence != null && !["low", "medium", "high"].includes(a.parse_confidence))
+      throw new Error(`pb-attach-signal: parse_confidence must be low|medium|high, got '${a.parse_confidence}'`);
+    if (a.stage != null) {
+      const stages = await declaredStages(sql, userId);
+      if (!stages)
+        throw new Error("pb-attach-signal: no lifecycle declared — pb-declare-stages first, or omit `stage`");
+      if (!stages.includes(a.stage))
+        throw new Error(`pb-attach-signal: stage must be one of ${stages.join("|")} (the declared lifecycle), got '${a.stage}'`);
+    }
+    const rows = await sql.query(
+      `update tasks
+          set signal_url = coalesce($3, signal_url),
+              parse_confidence = coalesce($4, parse_confidence),
+              stage = coalesce($5, stage),
+              stage_detail = case when $5::text is null then stage_detail else $6 end,
+              stage_updated_at = case when $5::text is null then stage_updated_at else now() end,
+              updated_at = now()
+        where id = $1 and user_id = $2 and signal_type = 'dossier'
+      returning id, short_label, stage, stage_detail, signal_url, parse_confidence`,
+      [taskId, userId, a.signal_url ?? null, a.parse_confidence ?? null, a.stage ?? null, a.stage_detail ?? null],
+    );
+    return rows[0] ?? { id: null, error: "no such dossier for this user (pb-attach-signal only writes signal_type='dossier' rows)" };
   },
 
   // The lifecycle read: this tenant's dossiers, optionally at one stage.
