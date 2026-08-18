@@ -51,6 +51,12 @@ Declares the pilot lifecycle (`to-qualify → contact-identified → sequence-ru
 call-booked | phone-fallback` — pilot content, declared by the seed exactly as a bootstrap would
 declare it) and creates the 5 dossiers from the mirror's reporting sheet, entering at `to-qualify`.
 
+**Or run the real bootstrap instead of the seed**: `/playbook-jupi:setup-playbook-jupi` in a dev
+session — the agentic path: it extracts the playbook from the mirror's docs (decision points,
+declared/inferred entries, **holes**), creates the dossiers from the same source, and renders the
+projection to `projectionTarget`. The seed stays the fast mechanical path (no extraction, no
+projection); both are idempotent and they compose — seed first, bootstrap enriches.
+
 ## Who plays whom
 
 | Mirror role | Played by | Where |
@@ -68,15 +74,15 @@ not-yet-live steps by hand with the CLI verbs and the honest table below:
 |---|---|---|---|
 | 1 | Seed the world | `node dev/seed.mjs` | ✅ live |
 | 2 | Inspect it | `node plugins/playbook-jupi/shared/playbook.mjs pb-list-dossiers` · `pb-get-stages` · `pb-list-entries` | ✅ live |
-| 3 | Plan: 2 [BR] decisions gate all 5 dossiers | act-or-decide rewrite | ⏳ TECH-489 (until then: create the decision in the `test` workspace by hand to rehearse Claire's side) |
-| 4 | Settle as Claire, rule written, drafts land in the dev Gmail | act-post-decision + execute-action (already shipped) driven by the planner | ⏳ TECH-489 |
+| 3 | Plan: 2 [BR] decisions gate all 5 dossiers | `/playbook-jupi:act-or-decide` (start with `--dry-run` — classifies and reports, writes nothing) | ✅ live (TECH-489/491/492) |
+| 4 | Settle as Claire, rule written, drafts land in the dev Gmail | settle in the `test` workspace, then `/playbook-jupi:act-post-decision` (already shipped) executes the chosen option | ✅ live |
 | 5 | Inject a prospect reply | open a file in [`mirror/scenarios/`](mirror/scenarios/), send its mail (subject, body) from your external mailbox **to the dev mailbox** — see *Injection realism* below for persona and threading | ✅ live (the mail lands, visible in Gmail) |
 | 6 | Attach: inbound → its dossier, stage advances | invoke the skill in a dev session — `/playbook-jupi:refresh-backlog` (needs the dev mailbox readable in that session; see the Gmail-access options on TECH-487) — it sweeps, matches (thread → sender → content), calls `pb-attach-signal`, reports attached/ambiguous/unmatched | ✅ live (TECH-487) |
-| 7 | Classify + next step vs the scenario's "expected engine behavior" block | planner + guardrails | ⏳ TECH-489 / TECH-492 |
+| 7 | Classify + next step vs the scenario's "expected engine behavior" block | the planner's inbound path: tripwires first, then the residue test, out-of-script as a first-class outcome | ✅ live (TECH-489/491/492) |
 | 8 | Reset and replay | `node dev/reset.mjs` → `node dev/seed.mjs` → identical world | ✅ live |
 
-The **< 30 min replay** target: steps 1–2–5–6–8 today; the full 1→8 loop as TECH-489 lands — each
-Phase-2 PR must demo on this bench and flips its row to ✅.
+The **< 30 min replay** target now covers the full 1→8 loop — the one prerequisite for the
+in-session legs of steps 5–6 is the Gmail-access decision (options on TECH-487).
 
 ### Injection realism — persona and threading
 
