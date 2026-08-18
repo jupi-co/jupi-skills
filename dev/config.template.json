@@ -8,8 +8,10 @@
   "neonConnString": "<neon-conn-string>",
   "_watchedSource": "the inbound source the watch reads — a generic engine-facing key (the inbound-watch rewrite owns its final shape); THIS bench's instance is a mailbox: the fake operator's dev Gmail (see dev/mirror/README.md, 'Léa Marchal'). The real address is deliberately NOT in the repo: fill it here locally",
   "watchedSource": "<dev-mailbox>@gmail.com",
-  "_dossierSource": "where the tracked dossiers are read from — a generic engine-facing key (the bootstrap will read it); THIS bench's instance is the pilot mirror's fake reporting sheet",
+  "_dossierSource": "where the tracked dossiers are read from — a generic engine-facing key (the bootstrap reads it); THIS bench's instance is the pilot mirror's fake reporting sheet",
   "dossierSource": "dev/mirror/accounts.csv",
+  "_playbookSources": "the owner documents the bootstrap extracts the playbook from — generic engine-facing key, array of paths/refs; THIS bench's instance is the mirror's fake process doc + sequence template",
+  "playbookSources": ["dev/mirror/owner-doc.md", "dev/mirror/sequence-partner.md"],
   "_projectionTarget": "where the human-readable playbook projection lands on the bench — a local file standing in for the real store (hybrid tier 1: Sheet/Notion as local files)",
   "projectionTarget": ".playbook-jupi/playbook.local.md"
 }
