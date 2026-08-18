@@ -31,7 +31,12 @@ README's cast and zero-real-entities rule first.
 ```bash
 cp dev/config.template.json .playbook-jupi/config.local.json
 # … then fill <neon-conn-string> and <dev-mailbox> in the copy (gitignored)
+cp .playbook-jupi/config.local.json .proactive-jupi/config.local.json
 ```
+
+The second copy matters (found live in the Phase-2 test): the parity-locked `db.mjs` — which the
+verbatim-copied skills and the gating verbs run through — only walks `.proactive-jupi/`, while
+`playbook.mjs` reads either. Both paths are gitignored; keep the two copies identical.
 
 ```bash
 bash plugins/playbook-jupi/shared/ensure-deps.sh
