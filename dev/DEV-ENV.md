@@ -70,13 +70,30 @@ not-yet-live steps by hand with the CLI verbs and the honest table below:
 | 2 | Inspect it | `node plugins/playbook-jupi/shared/playbook.mjs pb-list-dossiers` · `pb-get-stages` · `pb-list-entries` | ✅ live |
 | 3 | Plan: 2 [BR] decisions gate all 5 dossiers | act-or-decide rewrite | ⏳ TECH-489 (until then: create the decision in the `test` workspace by hand to rehearse Claire's side) |
 | 4 | Settle as Claire, rule written, drafts land in the dev Gmail | act-post-decision + execute-action (already shipped) driven by the planner | ⏳ TECH-489 |
-| 5 | Inject a prospect reply | open a file in [`mirror/scenarios/`](mirror/scenarios/), send its mail (sender persona, subject, body) from your external mailbox **to the dev mailbox** — reply in-thread when a thread exists, else send it standalone as the scenario specifies | ✅ live (the mail lands, visible in Gmail) |
-| 6 | Attach: inbound → its dossier, stage advances | inbound-watch rewrite | ⏳ TECH-487 (until then: `pb-set-stage <id> reply-to-handle` by hand) |
+| 5 | Inject a prospect reply | open a file in [`mirror/scenarios/`](mirror/scenarios/), send its mail (subject, body) from your external mailbox **to the dev mailbox** — see *Injection realism* below for persona and threading | ✅ live (the mail lands, visible in Gmail) |
+| 6 | Attach: inbound → its dossier, stage advances | invoke the skill in a dev session — `/playbook-jupi:refresh-backlog` (needs the dev mailbox readable in that session; see the Gmail-access options on TECH-487) — it sweeps, matches (thread → sender → content), calls `pb-attach-signal`, reports attached/ambiguous/unmatched | ✅ live (TECH-487) |
 | 7 | Classify + next step vs the scenario's "expected engine behavior" block | planner + guardrails | ⏳ TECH-489 / TECH-492 |
 | 8 | Reset and replay | `node dev/reset.mjs` → `node dev/seed.mjs` → identical world | ✅ live |
 
-The **< 30 min replay** target: steps 1–2–5–6(hand)–8 today; the full 1→8 loop as TECH-487/489 land —
-each of those PRs must demo on this bench and flips its row to ✅.
+The **< 30 min replay** target: steps 1–2–5–6–8 today; the full 1→8 loop as TECH-489 lands — each
+Phase-2 PR must demo on this bench and flips its row to ✅.
+
+### Injection realism — persona and threading
+
+Two things the injected mail does NOT need, and why:
+
+- **A forged sender.** Your mail arrives with your real external address in `From:` — expected. The
+  persona lives in the **content**: the scenario's subject, body, and signature ("Hugo Ferrand —
+  Nodaviz"). That mirrors the pilot's reality (people reply from odd aliases; assistants answer in
+  their place), which is exactly why the watch matches **thread → sender → content** and never
+  trusts `From:` alone. Optional legibility trick: send from `you+nodaviz@…` (plus-addressing).
+- **A real thread, before outbound exists.** Until the planner (TECH-489) sends sequence mail, there
+  is nothing to reply *to* — send the scenario standalone with the subject as `Re: <the sequence
+  mail-1 subject>`; the watch's out-of-thread path (sender/content match) is the one exercised, and
+  it is the nominal real-world path anyway. Once outbound drafts exist: at the human send step, swap
+  the recipient from the `.example` address to your external mailbox, send, and **reply from there**
+  — a genuine thread with genuine headers comes back, exercising the thread-shortcut path. Keep both
+  variants in rotation: real pilots break threads all the time.
 
 ## Reset semantics
 
