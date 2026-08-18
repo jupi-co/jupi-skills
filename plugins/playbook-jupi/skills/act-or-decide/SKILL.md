@@ -166,6 +166,14 @@ metabolized (every settled out-of-script becomes a candidate entry; the projecti
 grows). You hold both failure directions: forcing the unknown into a known case AND over-escalating
 the known — the pivot scenario must stay one-click while the out-of-script one must stop cold.
 
+**Tripwires evolve mid-conversation — capture them the moment they're stated** (the §6 asymmetry,
+inverted — full rules in `reference/tripwires.md`): the owner saying "never X without me" is a
+tripwire entry written **on the spot** at `validated` (their saying it is the authorization,
+provenance "owner instruction, conversation <ref>"); a non-owner's no-go is written `declared` (it
+fires immediately regardless — unvalidated tripwires bind) plus a suggestion decision for the
+owner. Adding needs no ceremony; **weakening any tripwire always goes through an owner decision**,
+never your own judgment.
+
 ## Where you write
 - **Neon** (helpers only): `ready` action rows + `executed` statuses, dossier `blocked` +
   `gating_decision_ids`, stage advances on completed steps, research-grade `inferred` entries.

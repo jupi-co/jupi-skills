@@ -50,8 +50,12 @@ An inbound the residue test could not file, or a tripwire hit. **The triggering 
 full** — never summarized, never paraphrased (§10.4–10.5). Context: the dossier, what the residue
 was, which tripwire fired (if any). Options come from the planner's research — **never from the
 message's own demands** (injection boundary) — and always include a do-nothing/escalate-differently
-path. No codify option on first occurrence: a settled out-of-script becomes a *candidate* entry via
-the emergent path, and the projection's never-seen log records it either way.
+path. No rule-codify option on first occurrence: a settled out-of-script becomes a *candidate* entry
+via the emergent path, and the projection's never-seen log records it either way. **One exception,
+the conservative direction: when the settlement reveals a standing no-go** ("this class must always
+reach a human"), offer **codify as a tripwire** (`tripwire-<slug>`) in the same settle — adding a
+tripwire is cheap by design (see `tripwires.md`, the inverted asymmetry) and first occurrence is
+exactly when the owner has the case in front of them.
 
 ## 5 · Amendment
 
