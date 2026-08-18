@@ -12,7 +12,7 @@ These skills let an agent (in Claude Code, Cowork, or Cursor) work with your tea
 
 All three are bundled in a single plugin, `jupi-skills`.
 
-This marketplace also ships **`proactive-jupi`** — the proactive decision engine that builds context on you and your work, turns incoming signals into a scored task backlog, and posts ready-to-settle Jupi decisions for genuine trade-offs. See [Proactive-Jupi](#proactive-jupi) below.
+This marketplace also ships **`proactive-jupi`** — the proactive decision engine that builds context on you and your work, turns incoming signals into a scored task backlog, and posts ready-to-settle Jupi decisions for genuine trade-offs — and **`playbook-jupi`**, its closed-world sibling that runs a user-declared process instead of discovering work. See [Proactive-Jupi](#proactive-jupi) and [Playbook-Jupi](#playbook-jupi) below.
 
 > The skills call the **Jupi MCP server** (`https://apis.jupi.co/mcp`). In Claude Code & Cowork it's **bundled with the plugin** — nothing to install separately. Cursor needs it added manually (see [Cursor](#cursor)).
 
@@ -205,6 +205,37 @@ Design docs for the engine (the implementation plan and the per-phase plans refe
 
 ---
 
+## Playbook-Jupi
+
+`playbook-jupi` is the **closed-world** sibling of proactive-jupi, forked from it. Where proactive *discovers* work in your tools, playbook-jupi **runs a process you declare**: your playbook defines the frame — what is in scope, which long-lived dossiers are tracked, and the lifecycle they traverse. Holes in the playbook surface as ready-to-settle Jupi decisions; validated decisions become rules that graduate steps from ask-every-time to act (draft-gated). The engine is deliberately domain-agnostic — the playbook's content (an outreach funnel, a hiring pipeline, contract reviews…) is yours; the model and its guarantees live in [`playbook-contract.md`](plugins/playbook-jupi/shared/playbook-contract.md).
+
+### Install (Claude Code & Cowork — desktop app included)
+
+Open a session **in the workspace where your playbook config lives** — the skills resolve `.playbook-jupi/config.local.json` walking up from the session's folder, so a session opened elsewhere won't see it. Then:
+
+```
+/plugin marketplace add jupi-co/jupi-skills
+/plugin install playbook-jupi@jupi-skills
+```
+
+Skip the first line if the marketplace is already registered (then `/plugin marketplace update jupi-skills` refreshes it). Installing pulls the `jupi-skills` dependency and the bundled Jupi MCP automatically; the skills appear namespaced as `/playbook-jupi:…`.
+
+### Configure
+
+Instance state and secrets live under `.playbook-jupi/` at the workspace root (gitignored — never commit it):
+
+```bash
+cp dev/config.template.json .playbook-jupi/config.local.json
+```
+
+Fill the placeholders in the copy — the template's `_`-prefixed keys document what each value means. The config's **keys** are engine vocabulary (`watchedSource`, `dossierSource`, `inboundStage`, …); its **values** are your playbook's content.
+
+### Status — what runs today
+
+The engine is under active build; skills go live progressively, PR by PR. **The single source of truth for what runs today is the dev-bench runbook's status table: [`dev/DEV-ENV.md`](dev/DEV-ENV.md)** — this README deliberately doesn't duplicate it (a copy would drift). Until the bootstrap skill lands, that runbook — seed a declared world from a source file, sweep, inspect, reset, replay — *is* the setup path; `setup-playbook-jupi` is a guarded skeleton that says so if invoked.
+
+---
+
 ## Repo layout
 
 ```
@@ -223,12 +254,14 @@ plugins/proactive-jupi/
   shared/                              db.mjs, schema.sql, apply-schema.mjs, ensure-deps.sh
   skills/                              refresh-backlog, update-brain, act-or-decide,
                                        act-post-decision, execute-action, setup-proactive-jupi
-plugins/playbook-jupi/                 closed-world fork of proactive-jupi (scaffold: the three
-                                       rewritten skills are explicit-invoke skeletons until their
-                                       rewrites land). shared/ db.mjs + ensure-deps.sh stay
-                                       byte-identical with proactive-jupi — CI-enforced;
-                                       execute-action, act-post-decision, update-brain are synced
-                                       copies (marker in each SKILL.md)
+plugins/playbook-jupi/                 closed-world fork of proactive-jupi (see the Playbook-Jupi
+                                       section; live-skill status: dev/DEV-ENV.md). shared/ db.mjs +
+                                       ensure-deps.sh stay byte-identical with proactive-jupi —
+                                       CI-enforced; execute-action, act-post-decision, update-brain
+                                       are synced copies (marker in each SKILL.md); playbook.mjs +
+                                       playbook-contract.md carry everything the fork adds
+dev/                                   the playbook-jupi dev bench: DEV-ENV.md (runbook + status),
+                                       seed/reset, config template, mirror/ fixture world
 tools/                                 validate-plugin.sh, package-plugin.sh, install-hooks.sh, …
 evals/                                 skill eval suites (run-eval.sh, seed-scratch.mjs)
 docs/                                  architecture diagrams (SVG)
