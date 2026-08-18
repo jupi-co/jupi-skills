@@ -77,7 +77,7 @@ Read every `playbookSources` document **in full**, then write the playbook's thr
    - **`declared`** — extracted verbatim and unambiguous from the doc (a priority list, an explicit
      instruction). Its first use becomes a one-click pre-filled decision downstream; what makes
      that safe is the provenance you set here.
-   - **`inferred`** — derived from sparse material (a template generalized to other partners, a
+   - **`inferred`** — derived from sparse material (a template adapted to other partners, a
      timing parameter read out of a best-practice appendix). Say what you derived it from.
    - **A declared hole** — `answer` omitted: the doc *raises* the question but doesn't answer it
      (a "check case by case before writing" caution is a hole with a scope axis, not an answer).
