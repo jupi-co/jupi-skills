@@ -40,7 +40,8 @@ if something is missing, close the run record saying so and stop.
 }
 
 ## Run
-1. Write both config files. THE LEASE, before any work: for each routine name below, run
+1. Write both config files. THE LEASE, before any work: for each run name — catchup,
+   daily, go, process-reply (the human entry points hold the same lease) — run
    node "${CLAUDE_PLUGIN_ROOT}/shared/db.mjs" run-last <name> 1
    If any run is still 'running' and started less than leaseMinutes ago, STOP — output one
    line ("live run in progress, yielding") and open no run record. (A stalled run — running
