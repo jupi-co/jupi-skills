@@ -82,7 +82,11 @@ if something is missing, close the run record saying so and stop.
    follow-ups (timing entries), decisions, handoff checklist.
 5. On Fridays only: the playbook review — re-render the projection from the rows, and
    report the playbook's state in the run summary: holes still open, entries by status,
-   evidence tallies, anything suspended, codifications ripe by recurrence.
+   evidence tallies, anything suspended, codifications ripe by recurrence — and the
+   ledger's open questions: every application still at outcome 'unknown'
+   (pb-list-applications --outcome unknown), listed so the owner can answer in one
+   message ("the <point> draft on <dossier>: as-is, edited, or dropped?"). You are
+   unattended — LIST them, never guess an outcome.
 6. Close the run record honestly, as above.
 ```
 

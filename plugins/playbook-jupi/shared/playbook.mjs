@@ -57,6 +57,22 @@
 //       in a single guarded update. The dossier's signal_ref (its identity
 //       key) never changes; the watch stores pointers, never bodies.
 //   pb-list-dossiers [--stage <s>]           → [ {dossier}, … ]
+//   ── the application ledger (TECH-495) + auto-suspension (TECH-498) ──
+//   pb-log-application '<json>'              → { id, entry_id, outcome: "unknown" }
+//       json: entry_id (required — the validated entry that authorized the act),
+//             task_id? (the dossier), action_id? (the acted row)
+//       One row per rule application, written the moment the planner acts on a
+//       rule. Fate arrives later via pb-note-outcome.
+//   pb-note-outcome <application_id> <as_is|edited|abandoned> [noted_by] [severe]
+//       → { id, outcome, entry: {…}, suspended?: true }
+//       Declarative V1: as_is → evidence_count+1 · edited → counter+1 ·
+//       abandoned → recorded, no bump (weak signal). THE DOWNWARD PATH (§6): if
+//       the entry is validated and counter_evidence_count reaches
+//       config.suspendThreshold (default 2) — or severe is passed — the entry is
+//       AUTOMATICALLY suspended (mechanical; going down is the conservative
+//       direction). The CALLER then raises the [BR] amendment decision — the
+//       agentic half stays with the skills.
+//   pb-list-applications [--entry <id>] [--outcome <o>]  → [ {application}, … ]
 //
 // Config resolution — same walk as db.mjs, one difference: this plugin's home
 // folder is `.playbook-jupi/`, and `.proactive-jupi/` is accepted as a fallback
@@ -509,6 +525,83 @@ export const VERBS = {
       [taskId, userId, a.signal_url ?? null, a.parse_confidence ?? null, a.stage ?? null, a.stage_detail ?? null],
     );
     return rows[0] ?? { id: null, error: "no such dossier for this user (pb-attach-signal only writes signal_type='dossier' rows)" };
+  },
+
+  // ── the application ledger ───────────────────────────────────────────────
+  // One row per rule application (§6's visibility precondition, materialized):
+  // written the moment an act runs under a validated entry's authority.
+  async "pb-log-application"(sql, [jsonArg], userId) {
+    const a = JSON.parse(jsonArg);
+    if (!a.entry_id) throw new Error("pb-log-application: `entry_id` is required (the entry that authorized the act)");
+    const rows = await sql.query(
+      `insert into applications (user_id, entry_id, task_id, action_id)
+       select $1, $2, $3, $4
+        where exists (select 1 from playbook_entries where id = $2 and user_id = $1)
+       returning id, entry_id, task_id, action_id, outcome, created_at`,
+      [userId, a.entry_id, a.task_id ?? null, a.action_id ?? null],
+    );
+    return rows[0] ?? { id: null, error: "no such playbook entry for this user" };
+  },
+
+  // Declare an application's fate (declarative V1) and wire the evidence ledger:
+  // as_is → evidence+1 · edited → counter+1 · abandoned → recorded, no bump.
+  // THE DOWNWARD PATH (§6): a validated entry whose counter reaches
+  // config.suspendThreshold (default 2) — or any severe incident — is suspended
+  // HERE, mechanically (going down is the conservative direction: it only asks
+  // more questions). The caller raises the [BR] amendment decision; this verb
+  // returns `suspended: true` + the entry so it can.
+  async "pb-note-outcome"(sql, [appId, outcome, notedBy, severeArg], userId) {
+    if (!["as_is", "edited", "abandoned"].includes(outcome))
+      throw new Error(`pb-note-outcome: outcome must be as_is|edited|abandoned, got '${outcome}'`);
+    const severe = severeArg === "severe" || severeArg === "true" || notedBy === "severe";
+    const rows = await sql.query(
+      `update applications
+          set outcome = $3, noted_by = $4, severe = $5, noted_at = now()
+        where id = $1 and user_id = $2
+      returning id, entry_id, outcome, severe`,
+      [appId, userId, outcome, notedBy && notedBy !== "severe" ? notedBy : null, severe],
+    );
+    if (!rows[0]) return { id: null, error: "no such application for this user" };
+    const app = rows[0];
+    const bump = outcome === "as_is" ? "evidence" : outcome === "edited" ? "counter" : null;
+    let entry = (await sql.query(
+      `update playbook_entries
+          set evidence_count         = evidence_count + case when $3 = 'evidence' then 1 else 0 end,
+              counter_evidence_count = counter_evidence_count + case when $3 = 'counter' then 1 else 0 end,
+              updated_at = now()
+        where id = $1 and user_id = $2
+      returning id, point_id, scope_key, status, version, evidence_count, counter_evidence_count`,
+      [app.entry_id, userId, bump],
+    ))[0];
+    const threshold = Number((loadWorkspaceConfig() || {}).suspendThreshold) || 2;
+    let suspended = false;
+    if (entry && entry.status === "validated" && (severe || entry.counter_evidence_count >= threshold)) {
+      entry = (await sql.query(
+        `update playbook_entries set status = 'suspended', updated_at = now()
+          where id = $1 and user_id = $2
+        returning id, point_id, scope_key, status, version, evidence_count, counter_evidence_count`,
+        [app.entry_id, userId],
+      ))[0];
+      suspended = true;
+    }
+    return { ...app, entry, ...(suspended ? { suspended: true } : {}) };
+  },
+
+  async "pb-list-applications"(sql, args, userId) {
+    const f = parseFlags(args, ["entry", "outcome"]);
+    if (f.outcome && !["unknown", "as_is", "edited", "abandoned"].includes(f.outcome))
+      throw new Error(`--outcome must be unknown|as_is|edited|abandoned, got '${f.outcome}'`);
+    return sql.query(
+      `select a.id, a.entry_id, e.point_id, e.scope_key, a.task_id, a.action_id,
+              a.outcome, a.severe, a.noted_by, a.created_at, a.noted_at
+         from applications a
+         join playbook_entries e on e.id = a.entry_id and e.user_id = a.user_id
+        where a.user_id = $1
+          and ($2::uuid is null or a.entry_id = $2)
+          and ($3::text is null or a.outcome = $3)
+        order by a.created_at`,
+      [userId, f.entry ?? null, f.outcome ?? null],
+    );
   },
 
   // The lifecycle read: this tenant's dossiers, optionally at one stage.

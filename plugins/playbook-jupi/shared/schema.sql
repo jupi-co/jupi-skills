@@ -298,6 +298,36 @@ create unique index if not exists playbook_entries_user_point_scope_uniq
 create index if not exists playbook_entries_user_status_idx
   on playbook_entries (user_id, status);
 
+-- ── APPLICATIONS ──────────────────────────────────────────────────────
+-- The application ledger — design §6, §11 item 9. One row = one act taken
+-- from a validated entry (the planner sets rule_ref on the action; this table
+-- materializes the ledger line with its FATE). Displayed confidence is DERIVED
+-- from here ("applied 12× without edits, 0 contradictions") — there is
+-- deliberately no stored score anywhere.
+--   outcome: 'unknown' until someone says (declarative V1 — the operator or
+--            the weekly review); 'as_is' bumps the entry's evidence_count,
+--            'edited' bumps counter_evidence_count, 'abandoned' is recorded as
+--            a weak signal (neither counter). The technical draft-vs-sent diff
+--            replaces the declarative path at bench tier 2+.
+--   severe:  a severe incident — suspends the entry immediately regardless of
+--            the counter (§6: going down may be automatic; it is the
+--            conservative direction).
+create table if not exists applications (
+  id          uuid primary key default gen_random_uuid(),
+  user_id     text not null,                        -- tenant key, as everywhere
+  entry_id    uuid not null references playbook_entries(id) on delete cascade,
+  task_id     uuid references tasks(id) on delete set null,    -- the dossier acted on
+  action_id   uuid references actions(id) on delete set null,  -- the acted row
+  outcome     text not null default 'unknown'
+                check (outcome in ('unknown','as_is','edited','abandoned')),
+  severe      boolean not null default false,
+  noted_by    text,                                 -- who declared the outcome
+  created_at  timestamptz not null default now(),
+  noted_at    timestamptz
+);
+create index if not exists applications_user_entry_idx   on applications (user_id, entry_id);
+create index if not exists applications_user_outcome_idx on applications (user_id, outcome);
+
 -- ── MIGRATIONS ─────────────────────────────────────────────────────────
 -- Idempotent reconciliation for a tasks table created before the current shape.
 -- No-ops on a fresh install (columns already correct) and on re-runs.

@@ -28,5 +28,16 @@ your own** — classification, guardrails and the next step all belong to the sk
 4. **`act-or-decide` restricted to that one dossier** — the full inbound path applies (tripwires
    first, residue test, out-of-script as a first-class outcome), but no other dossier is planned,
    touched, or reported beyond one context line.
-5. `db.mjs run-close <id>` honestly, and return the planner's verdict for that dossier — the
-   decision link, the draft trace, or the handoff line.
+5. **The outcome question (§6, declarative V1)** — the operator is right here, which makes this
+   the cheapest moment: if this dossier carries applications with outcome `unknown`
+   (`playbook.mjs pb-list-applications --outcome unknown`, filter to this dossier), ask in one
+   line — *"the draft that preceded this reply: sent as-is, edited, or dropped?"* — and record it:
+   `pb-note-outcome <id> <as_is|edited|abandoned> "<who>"` (append `severe` for a genuine
+   incident). **If the verb returns `suspended: true`, the entry just went back to case-by-case
+   automatically (§6 — down is the conservative direction): raise the [BR] amendment decision NOW**
+   (template 5 — re-validate as-is / amend / retire), anchored on this concrete case, and say in
+   the report that the rule is suspended pending the owner's call. No answer → leave it `unknown`,
+   never guess.
+6. `db.mjs run-close <id>` honestly, and return the planner's verdict for that dossier — the
+   decision link, the draft trace, or the handoff line — plus any outcome recorded and any
+   suspension raised.
