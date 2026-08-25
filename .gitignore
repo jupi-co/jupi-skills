@@ -30,3 +30,5 @@ dist/
 
 # Eval run artifacts — regenerable, often large, sometimes carry real signal content
 evals/*/workspace/
+# …and the plugin-nested sets one level deeper (evals/<plugin>/<skill>/workspace/)
+evals/*/*/workspace/

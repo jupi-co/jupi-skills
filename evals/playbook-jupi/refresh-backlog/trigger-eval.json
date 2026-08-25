@@ -1,1 +1,34 @@
-[]
+[
+  {
+    "query": "check for replies",
+    "should_trigger": true
+  },
+  {
+    "query": "anything new to attach to the dossiers?",
+    "should_trigger": true
+  },
+  {
+    "query": "process the inbox and reconcile the dossiers",
+    "should_trigger": true
+  },
+  {
+    "query": "any new inbound since the last run?",
+    "should_trigger": true
+  },
+  {
+    "query": "what's the next step per dossier?",
+    "should_trigger": false
+  },
+  {
+    "query": "carry out the decisions I finalized",
+    "should_trigger": false
+  },
+  {
+    "query": "process this reply",
+    "should_trigger": false
+  },
+  {
+    "query": "refresh my memory about this company",
+    "should_trigger": false
+  }
+]
