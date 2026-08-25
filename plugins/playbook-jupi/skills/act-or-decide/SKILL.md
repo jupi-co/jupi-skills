@@ -78,6 +78,9 @@ lifecycle order. Nothing here computes a number.
 Per dossier: what does the process say comes next at this stage? The lifecycle gives the direction;
 the entries give the how. Name the step and **the decision point(s) it touches** (`point_id` ×
 `scope_key`, the scope instantiated from the dossier's attrs — `broker=<the dossier's broker attr>`).
+**And name who executes it** (§8 mixed executor): a step whose surface has no connector here — or
+that the playbook marks as the operator's (the send gesture, calls, network outreach, enrichment) —
+is a **handoff**, not a tool action. Jupi prepares everything preparable; the human performs.
 
 **If the dossier sits at `inboundStage`, classify the attached inbound FIRST — under the guardrails:**
 1. **Tripwires before anything** (§10.4): check the inbound against every `tripwire-*` entry. A hit
@@ -148,15 +151,37 @@ closed-world simplification that confidence came from the gate itself:
 - Emit: `db.mjs insert-action '<json>'` (`task_id` = the dossier, `tool`, `description` with the
   exact call + thread id for replies, **`rule_ref`** — the entry id that authorized it, `exposure`).
   *(dry-run: record for the table, write nothing.)*
-- **Hand off** the `ready` rows to **`execute-action`**; on `{ok:true, trace}` →
+- **Hand off** the `ready` rows **except `tool: handoff`** to **`execute-action`** (a handoff has
+  no tool write to perform — the worker never sees one; it is rendered to the human instead, below);
+  on `{ok:true, trace}` →
   `set-action-status <id> executed <trace>`; `ok:false` rows stay `ready` for the next sweep. Then
   advance the dossier's stage if the step completed it (`pb-set-stage`, e.g. sequence advanced →
   detail = next step index).
 
+### Handoffs — the steps the human executes (§8, §11 item 7)
+A `handoff` is a first-class action the plan produces when the executor is the operator, not a tool:
+identify a contact when no source has it, network outreach, the phone fallback, and **the send
+gesture itself**. Mechanics:
+- **Emit** it like any ACT — `insert-action` with `tool: "handoff"`, the `description` carrying
+  everything Jupi could prepare (who · what · the prepared content or its location · the dossier) —
+  **but dedup first**: `list-actions status ready`, and if an open handoff for the same dossier and
+  step already exists, do **not** insert a second one. An outstanding handoff is re-*listed*, never
+  re-*proposed*.
+- **Never hand it to `execute-action`** — there is nothing to perform; its surface is the human.
+- **Render every open handoff as the run report's checklist** (below) — new ones and outstanding
+  ones alike, so nothing silently ages out.
+- **Mark it done only on the human's word** — when they say it's done (in conversation, or via an
+  entry point), `set-action-status <id> executed "human: done — <their words>"`, and advance the
+  dossier's stage if the step completed it. Until then it stays `ready` and keeps appearing.
+- The definitive surface is an open design question (§12) — the report checklist is the minimal
+  denominator that doesn't prejudge it.
+
 ### Reporting — dossier-centric, every run
 One table, all dossiers: **dossier · stage · next step · verdict (ACT rule_ref / DECIDE link /
 WAIT-blocked / tripwire) · what happened**. Then **Deferred** (budget cuts, with scores of leverage
-— dossiers unblocked), **Unmatched guardrail events** (tripwire hits, out-of-script), and the footer:
+— dossiers unblocked), **☐ Handoffs — over to you** (the checklist: every open `tool: handoff` row —
+title · what Jupi prepared · dossier link · how long it has been waiting), **Unmatched guardrail
+events** (tripwire hits, out-of-script), and the footer:
 mode · decisionBudget · what this run left for the next one. `--dry-run`: this report IS the
 deliverable — say the window is as-of the last real refresh. Return it; write no files.
 
