@@ -151,6 +151,11 @@ closed-world simplification that confidence came from the gate itself:
 - Emit: `db.mjs insert-action '<json>'` (`task_id` = the dossier, `tool`, `description` with the
   exact call + thread id for replies, **`rule_ref`** — the entry id that authorized it, `exposure`).
   *(dry-run: record for the table, write nothing.)*
+- **Log the application** the moment a rule-covered ACT is emitted (§6's ledger, the visibility
+  precondition made material): `playbook.mjs pb-log-application '{"entry_id": <the rule entry>,
+  "task_id": <dossier>, "action_id": <the inserted row>}'`. Its fate arrives later
+  (`pb-note-outcome`, declarative V1 — the entry points and the Friday review collect it).
+  *(dry-run: skip.)*
 - **Hand off** the `ready` rows **except `tool: handoff`** to **`execute-action`** (a handoff has
   no tool write to perform — the worker never sees one; it is rendered to the human instead, below);
   on `{ok:true, trace}` →

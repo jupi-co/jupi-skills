@@ -14,6 +14,10 @@
   "dossierSource": "dev/mirror/accounts.csv",
   "_playbookSources": "the owner documents the bootstrap extracts the playbook from — generic engine-facing key, array of paths/refs; THIS bench's instance is the mirror's fake process doc + sequence template",
   "playbookSources": ["dev/mirror/owner-doc.md", "dev/mirror/sequence-partner.md"],
+  "_suspendThreshold": "counter-evidence (edited outcomes) before a validated entry is AUTOMATICALLY suspended back to case-by-case — §6's downward path; a severe incident suspends at 1 regardless",
+  "suspendThreshold": 2,
+  "_leaseMinutes": "the run lease: any run (catchup, daily, go, process-reply) yields to a live run younger than this; older = stalled, taken over",
+  "leaseMinutes": 10,
   "_projectionTarget": "where the human-readable playbook projection lands on the bench — a local file standing in for the real store (hybrid tier 1: Sheet/Notion as local files)",
   "projectionTarget": ".playbook-jupi/playbook.local.md"
 }

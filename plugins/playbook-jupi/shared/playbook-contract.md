@@ -109,6 +109,25 @@ explicit `pb-set-status` (suspension, §6).
   entries — the dossier verbs simply go unused. Nothing forces the case shape onto a process that
   doesn't have one.
 
+## The application ledger and the downward path (§6)
+
+- **Every rule application leaves a row** (`pb-log-application`, written by the planner the moment
+  a rule-covered ACT is emitted). Displayed confidence is *derived* from this ledger — "applied N×
+  without edits, M contradictions" — never a stored score.
+- **Outcomes are declarative in V1** (`pb-note-outcome <id> as_is|edited|abandoned [who] [severe]`):
+  `as_is` → `evidence_count`+1 · `edited` → `counter_evidence_count`+1 · `abandoned` → recorded, no
+  bump (a weak signal). The entry points and the Friday review collect them; nothing ever guesses
+  an outcome. The technical draft-vs-sent diff replaces the declarative path later.
+- **Suspension is automatic and mechanical** — the §6 asymmetry: going down only asks more
+  questions, so the *verb itself* demotes. A `validated` entry whose counter reaches
+  `config.suspendThreshold` (default 2), or any `severe` incident, flips to `suspended` inside
+  `pb-note-outcome` (version unchanged) and the gate stops returning it instantly. The verb returns
+  `suspended: true`; **the caller raises the [BR] amendment decision** (re-validate / amend /
+  retire — template 5) anchored on the triggering case: mechanical demotion, agentic escalation.
+- **Re-validation is the ordinary upward path** — the owner's amendment decision lands as
+  `validated` vN+1 (via `pb-upsert-entry` at validated or `pb-set-status`), and the gate returns
+  the entry again. Upward always requires the owner; nothing automatic ever re-validates.
+
 ## Plumbing (same rules as db.mjs)
 
 - **Tenancy**: every verb is scoped by `user_id` automatically — the config's `jupiUserId` (env

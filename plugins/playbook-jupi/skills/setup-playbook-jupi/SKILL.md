@@ -131,6 +131,32 @@ Structured state lives in the rows; the projection is for humans. Nothing load-b
 recoverable only from this file — if you find yourself encoding a fact solely in prose here, it
 belongs in an entry first.
 
+## Schedule the routines (§13 rung 1)
+
+**Read `reference/routine-prompts.md` first** — it holds both templates (catchup sentinel +
+daily full sweep), the carried-config rule, the run lease, and the fixed names. The short
+version of what you do here:
+
+- **Two cloud-scheduled routines, and only two**: `Playbook-Jupi — catchup` (business hours,
+  30–60 min, cheap no-op exit) and `Playbook-Jupi — daily` (one full sweep; Friday playbook
+  review). Fixed names — the reconcile matches on them, and they must not collide with the
+  proactive pair on the same account.
+- **Reconcile, don't re-create**: `list` first, match the exact name, `update` in place; then
+  **re-`list` and assert exactly one task per name** — delete extras and say so. Run the
+  `list`/`create`/`update` calls **in a subagent** (each response echoes the full prompt plus
+  the connector inventory — big enough to overflow this conversation).
+- **Fill the one-line `description` field** with the plain-language sentences from the
+  reference — phrased to match the cron you actually set.
+- **Anchor cadences to the user's day** where you know it; sensible clock times otherwise.
+  Convert to UTC correctly (shift the day when the conversion crosses midnight).
+
+> **✋ One thing only the user can do: approval mode.** The create API exposes no approval
+> parameter, so both routines land on **manual approval** — say plainly, as the last line:
+> *"Both routines exist. Open each one and set approval to automatic — until then they wait
+> for you instead of running."* On a re-run, `db.mjs run-last <name>` tells you whether
+> anything has actually fired since creation — report which of the three states you see
+> (never ran / died mid-run / degraded).
+
 ## Report
 
 Per-step ✅/🔧/⚠️ throughout, then: stages declared · decision points and entries by status ·
@@ -143,4 +169,4 @@ decisions land.*
 - **Neon** via `playbook.mjs` verbs (lifecycle entry, playbook entries, dossier rows).
 - **The projection file** at `projectionTarget` — the only file this skill writes.
 - **Never**: validated statuses, hand-written SQL, the user's tools, Facts, Jupi decisions, or any
-  other file. Scheduling routines is not this skill's job (the routine-split ticket owns it).
+  other file. **The two scheduled routines** (via the scheduler, reconciled by name — never a hidden cron).

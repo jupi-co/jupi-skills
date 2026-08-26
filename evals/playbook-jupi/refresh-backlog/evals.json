@@ -1,6 +1,49 @@
 {
   "skill_name": "refresh-backlog (playbook-jupi)",
-  "_isolation": "See evals/README.md — Neon eval: prefix + synthetic jupiUserId + is_eval cursors; read-only on tools. Fixture dossiers and inbound must be fictional.",
-  "_status": "scaffold (TECH-477) — cases land with the inbound-watch rewrite (design §11 items 5, 12)",
-  "evals": []
+  "_isolation": "Synthetic eval- tenant, is_eval cursors, dev Neon project; the watched source is the dev mailbox or a scratch stand-in — never a real inbox. Purge after every case.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Mirror dossiers seeded; a reply matching dev/mirror/scenarios/reply-pivot.md sits in the watched source from the known contact. Run refresh-backlog.",
+      "expected_output": "The reply attaches to the right dossier: stage moves to the configured inboundStage, thread id in stage_detail, permalink in signal_url, parse_confidence set high (sender match); other dossiers untouched.",
+      "files": [],
+      "expectations": [
+        "The right dossier is at inboundStage with the thread id as stage_detail and a signal_url set",
+        "parse_confidence reflects the match path (sender/thread = high)",
+        "No other dossier changed",
+        "The cursor advanced to the max observed marker"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Same world; the only new inbound is an off-topic mail from an unknown sender about an unrelated subject. Run refresh-backlog.",
+      "expected_output": "Listed as unmatched with sender · subject · why; NO row created, no dossier touched — the watch never invents work.",
+      "files": [],
+      "expectations": [
+        "The mail appears in the run summary as unmatched with a reason",
+        "No task row was created and no dossier changed",
+        "The cursor still advanced over the observed mail"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Two dossiers share the same broker contact person; a new inbound from that person names neither account. Run refresh-backlog.",
+      "expected_output": "Ambiguous: two candidates, NO write, both candidates reported for a human to untangle.",
+      "files": [],
+      "expectations": [
+        "No dossier was attached or staged",
+        "The summary lists the inbound as ambiguous with both candidate dossiers"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Run refresh-backlog while the watched source is unreachable (bad address / no connector in the scratch session).",
+      "expected_output": "Reported unreachable; the run stops BEFORE the cursor advance — never advance over unread content, never fail silently.",
+      "files": [],
+      "expectations": [
+        "The summary reports the source unreachable",
+        "The backlog cursor did not advance"
+      ]
+    }
+  ]
 }

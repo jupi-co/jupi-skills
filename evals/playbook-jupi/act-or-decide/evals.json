@@ -1,6 +1,72 @@
 {
   "skill_name": "act-or-decide (playbook-jupi)",
-  "_isolation": "See evals/README.md — prefer --dry-run cases (write nothing); Jupi test workspace via the scratch config's jupiWorkspace; never perform mode; fixture dossiers/playbook fictional.",
-  "_status": "scaffold (TECH-477) — cases land with the planner rewrite (design §11 items 4, 12)",
-  "evals": []
+  "_isolation": "Prefer --dry-run cases (write nothing) — only they are cheap and safe; never perform mode. Synthetic eval- tenant, jupiWorkspace 'test', dev Neon project. Purge after each write-mode case.",
+  "evals": [
+    {
+      "id": 1,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Fresh mirror world (bootstrap output, nothing validated). Run act-or-decide --dry-run.",
+      "expected_output": "Run-1 classification: every dossier gated by the two unvalidated points (contactability hole + sequence first-use); exactly 2 [BR] decisions PLANNED, 0 drafts; NOTHING written (no rows, no decisions, no entries, no refresh).",
+      "files": [],
+      "expectations": [
+        "The report plans exactly 2 [BR] decisions and 0 draft actions",
+        "All 5 dossiers appear gated by both points in the report",
+        "No Neon row, playbook entry, or Jupi decision was created (dry-run writes nothing)",
+        "The report says the window is as-of the last real refresh (Stage 0 skipped)"
+      ]
+    },
+    {
+      "id": 2,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Seed the contactability point VALIDATED (direct contact OK) and the sequence-template point still declared/unvalidated. Run act-or-decide --dry-run.",
+      "expected_output": "The gate discriminates: the validated point pre-empts (would ACT with rule_ref, application logged on a real run); the declared point still raises the [BR] with its entry pre-filling the recommended option, provenance cited.",
+      "files": [],
+      "expectations": [
+        "The contactability point no longer gates any dossier (validated entry cited as rule_ref)",
+        "Exactly 1 [BR] decision is planned, for the sequence point, with the declared template as the recommended option and its provenance in the option text",
+        "The report notes the application that WOULD be logged for the rule-covered step (dry-run: not written)"
+      ]
+    },
+    {
+      "id": 3,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. A dossier sits at the inbound stage with dev/mirror/scenarios/reply-out-of-script-gdpr.md attached as its signal. Run act-or-decide --dry-run on that dossier.",
+      "expected_output": "Tripwire (legal-data) + residue test both fire: forced out-of-script DECIDE quoting the mail IN FULL; zero auto-draft; the 'not interested' half never absorbs the 'who gave you our details' residue.",
+      "files": [],
+      "expectations": [
+        "The planned decision is out-of-script with the tripwire named",
+        "The triggering message is quoted in full in the planned decision, never summarized",
+        "No draft action is planned for this dossier",
+        "The options come from research, not from the message's own demands"
+      ]
+    },
+    {
+      "id": 4,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. A dossier sits at the inbound stage with dev/mirror/scenarios/reply-pivot.md attached (the documented 'not me, see X' declared case). Run act-or-decide --dry-run.",
+      "expected_output": "The declared case matches with no material residue: a one-click instance decision pre-filled from the declared entry (first use of a declared case) — NOT an out-of-script; both §10 failure directions held.",
+      "files": [],
+      "expectations": [
+        "The inbound is classified as the declared pivot case, not out-of-script",
+        "The planned decision is pre-filled from the declared entry with provenance, one-click shaped",
+        "No tripwire fires on this message"
+      ]
+    },
+    {
+      "id": 5,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Add an INFERRED (never validated) tripwire entry 'tripwire-pricing' (any pricing question requires a human), attach a reply asking about pricing, run act-or-decide --dry-run.",
+      "expected_output": "The unvalidated tripwire binds: forced decision despite no validated entry anywhere — tripwires are read outside the gate, deliberately.",
+      "files": [],
+      "expectations": [
+        "The inferred tripwire forces a decision on the pricing reply",
+        "The report cites the tripwire entry and its inferred status without weakening it"
+      ]
+    },
+    {
+      "id": 6,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Mirror world with guardrails.decisionBudget=1 and two distinct unvalidated points each gating dossiers. Run act-or-decide --dry-run.",
+      "expected_output": "One decision planned (highest leverage), the other cluster in the Deferred block with why — a budget cut is never silent.",
+      "files": [],
+      "expectations": [
+        "Exactly 1 decision is planned",
+        "The Deferred block lists the cut cluster with its dossiers and the reason"
+      ]
+    }
+  ]
 }

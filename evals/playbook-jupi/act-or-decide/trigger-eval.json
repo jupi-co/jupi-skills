@@ -1,1 +1,42 @@
-[]
+[
+  {
+    "query": "run the playbook",
+    "should_trigger": true
+  },
+  {
+    "query": "what's the next step per dossier?",
+    "should_trigger": true
+  },
+  {
+    "query": "work the dossiers and plan the next moves",
+    "should_trigger": true
+  },
+  {
+    "query": "avance le process sur les dossiers",
+    "should_trigger": true
+  },
+  {
+    "query": "do a dry-run of the planner",
+    "should_trigger": true
+  },
+  {
+    "query": "check for new replies in the inbox",
+    "should_trigger": false
+  },
+  {
+    "query": "carry out what we just settled",
+    "should_trigger": false
+  },
+  {
+    "query": "process this reply from the prospect",
+    "should_trigger": false
+  },
+  {
+    "query": "set up my playbook workspace",
+    "should_trigger": false
+  },
+  {
+    "query": "who is this person? get me up to speed",
+    "should_trigger": false
+  }
+]

@@ -8,10 +8,11 @@ proactive-jupi sets at the repo root; `run-eval.sh` takes the nested form as the
 ./evals/run-eval.sh layout playbook-jupi/act-or-decide
 ```
 
-> **Status: scaffolded with the plugin (TECH-477), cases TODO.** The skills these sets target are
-> skeletons (`disable-model-invocation: true` until their rewrites land), so there is nothing to run
-> yet. Extraction + planner smoke evals land with the evals item of the build plan (§11, item 12);
-> trigger sets get filled when the two auto-invocable skills flip to `disable-model-invocation: false`.
+> **Status: cases filled (TECH-499)** — extraction (4), planner smoke (6), inbound watch (4), plus
+> trigger sets for the two auto-invocable skills, all reusing the `dev/mirror/` scenarios' expected
+> behaviors. Teardown: `purge-scratch.mjs` (one script for all three sets — the bench reset core
+> with its synthetic-tenant guard). Run per `evals/README.md`: layout → executor subagents
+> (with_skill + baseline) → grade → benchmark → view; **dry-run cases first, never perform mode.**
 
 The **copied-verbatim** skills (`execute-action`, `act-post-decision`, `update-brain`) get no sets
 here: they are byte-synced copies of the proactive-jupi originals (see the `synced from
@@ -25,8 +26,8 @@ Per-set purge scripts arrive with the cases.
 
 ## The sets
 
-| Skill | Trigger eval | Behavioral | What will land here (design §) |
+| Skill | Trigger eval | Behavioral | What it covers |
 |---|---|---|---|
-| [`setup-playbook-jupi`](setup-playbook-jupi/) | ⛔ n/a (`disable-model-invocation` by design) | TODO | Extraction smoke: funnel + decision points + inferred/declared entries + declared holes from a fixture doc (§2–§4, §11.2) |
-| [`refresh-backlog`](refresh-backlog/) | TODO | TODO | Inbound watch: attach-don't-discover, out-of-dossier inbound reported not created (§8) |
-| [`act-or-decide`](act-or-decide/) | TODO | TODO | Planner smoke: next step from (stage × playbook), exact rule lookup on (decision_point, scope_key), holes → decisions (§2, §8–§10) |
+| [`setup-playbook-jupi`](setup-playbook-jupi/) | ⛔ n/a (`disable-model-invocation` by design) | ✅ 4 cases | Extraction (holes incl. the deliberate doc ambiguities, zero validated), per-row dossier stages, idempotence + owner-protection, injection resistance |
+| [`refresh-backlog`](refresh-backlog/) | ✅ | ✅ 4 cases | Attach to the right dossier, unmatched reported never created, ambiguous = no write, cursor honesty on unreachable source |
+| [`act-or-decide`](act-or-decide/) | ✅ | ✅ 6 cases | Run-1 = 2 [BR] 0 drafts (dry-run writes nothing), the gate discriminates, GDPR = forced out-of-script + tripwire, pivot stays one-click, unvalidated tripwires bind, budget cuts never silent |
