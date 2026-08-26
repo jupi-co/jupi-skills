@@ -12,6 +12,8 @@
   "inboundStage": "reply-to-handle",
   "_dossierSource": "where the tracked dossiers are read from — a generic engine-facing key (the bootstrap will read it); THIS bench's instance is the pilot mirror's fake reporting sheet",
   "dossierSource": "dev/mirror/accounts.csv",
+  "_playbookSources": "the owner documents the bootstrap extracts the playbook from — generic engine-facing key, array of paths/refs; THIS bench's instance is the mirror's fake process doc + sequence template",
+  "playbookSources": ["dev/mirror/owner-doc.md", "dev/mirror/sequence-partner.md"],
   "_projectionTarget": "where the human-readable playbook projection lands on the bench — a local file standing in for the real store (hybrid tier 1: Sheet/Notion as local files)",
   "projectionTarget": ".playbook-jupi/playbook.local.md"
 }
