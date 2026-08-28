@@ -60,6 +60,12 @@ if something is missing, close the run record saying so and stop.
    dossiers just unblocked or just attached — not the full sweep; the daily owns that.
 5. Close the run record honestly (ok | degraded '[{"what","cost"}]' | failed - "<why>").
    Never close 'ok' over a tool that didn't answer.
+6. When step 4 ran, end with the user's version of the report — ONE stitched narrative
+   (rules: act-or-decide's reference/REPORTING.md, §the user's version: assistant voice,
+   the user's language, no engine vocabulary): what moved, decisions waiting (with links),
+   the over-to-you checklist, what was left. The skills' technical reports stay in the
+   narration above; never make this summary shorter than what you logged. (A no-op exit
+   at step 3 needs none of this — its one line is the report.)
 ```
 
 ## The daily prompt (full sweep)
@@ -88,6 +94,13 @@ if something is missing, close the run record saying so and stop.
    message ("the <point> draft on <dossier>: as-is, edited, or dropped?"). You are
    unattended — LIST them, never guess an outcome.
 6. Close the run record honestly, as above.
+7. End with the user's version of the report — ONE stitched narrative (rules:
+   act-or-decide's reference/REPORTING.md, §the user's version: assistant voice, the
+   user's language, no engine vocabulary): what moved, decisions waiting (with links),
+   the over-to-you checklist, what was left. On Fridays the playbook review's findings
+   join it in the same plain language (what's still open for you to settle, what got
+   stronger, what I'm waiting to hear about). The skills' technical reports stay in the
+   narration above; never make this summary shorter than what you logged.
 ```
 
 ## Naming — load-bearing, and it must not collide with proactive's routines

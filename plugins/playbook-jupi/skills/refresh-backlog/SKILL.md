@@ -119,7 +119,12 @@ Then:
 - **Nothing else — and no files.** Your run summary is what you return; the routine records the run.
 
 ## Narrate + return
-Narrate per step (✅ done / ⚠️ needs attention). Return a short summary: window swept (source, bound →
-marker), **attached** (dossier ← thread, confidence), **ambiguous** (candidates listed), **unmatched**
-(sender · subject each), cursor advanced or not, and any config gap (missing `inboundStage`) or
-unreachable source.
+Narrate per step (✅ done / ⚠️ needs attention) — the technical summary belongs to the narration:
+window swept (source, bound → marker), attachments with confidences, ambiguous candidates, cursor
+advanced or not, any config gap (missing `inboundStage`) or unreachable source. **End with your
+user's version** (rules: `../act-or-decide/reference/REPORTING.md`, §the user's version —
+assistant voice, the user's language, no engine vocabulary): what arrived, by dossier label —
+*"Two replies came in: Alpha (from X), Beta (from Y)"* — and every `unmatched`/`ambiguous` as a
+plain sentence (*"a mail from Z I couldn't place: sender · subject"*), so a person can spot a real
+prospect writing from an unexpected place. Under `--technical`, the technical summary is the final
+message instead.
