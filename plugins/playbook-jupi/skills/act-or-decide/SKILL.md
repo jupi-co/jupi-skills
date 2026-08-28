@@ -186,12 +186,14 @@ gesture itself**. Mechanics:
 `reference/REPORTING.md` fixes both versions — read it before writing a word of either. The **run
 log** (the dossier table: dossier · stage · next step · verdict ACT rule_ref / DECIDE link /
 WAIT-blocked / tripwire · what happened; then Deferred, the ☐ Handoffs checklist, guardrail
-events, and the footer mode · decisionBudget · what this run left for the next one) lands in the
-narration — it is ours, the bench's and the routines'. The **user's version** — the
+events, and the footer mode · decisionBudget · what this run left for the next one) renders **only
+where someone will read it**: always in an unattended transcript (routine, bench); in attended
+runs only under `--technical`, on request, or in `--dry-run` — otherwise the narration stays the
+lean per-stage lines, so the user is not made to wait through tables. The **user's version** — the
 assistant-voiced four-block rendering in the user's language, no engine vocabulary — is the
 **final message by default**; under `--technical` the run log is the final message instead.
-`--dry-run`: the report IS the deliverable, all of it in the conditional — say the window is
-as-of the last real refresh. Return it; write no files.
+`--dry-run`: the report IS the deliverable — both versions, all of it in the conditional — say the
+window is as-of the last real refresh. Return it; write no files.
 
 ## Guardrails summary (§10 — the honest frame)
 Bounded (draft-first + the gate), detected fast (residue test, tripwires, independent re-read),
@@ -214,6 +216,7 @@ never your own judgment.
 - **Never**: the user's tools, Facts, `validated` entries, files. The report is returned, not written.
 
 ## Narrate + return
-Narrate per stage (✅/🔧/⚠️) — the run log belongs to the narration. End with the user's version
-(`reference/REPORTING.md`), or the run log itself under `--technical` — and in dry-run, the same
-with zero writes behind it and every claim in the conditional.
+Narrate per stage (✅/🔧/⚠️), lean — the full run log renders only where `reference/REPORTING.md`
+says it does (unattended transcript, `--technical`, on request, dry-run). End with the user's
+version, or the run log itself under `--technical` — and in dry-run, both, with zero writes
+behind them and every claim in the conditional.

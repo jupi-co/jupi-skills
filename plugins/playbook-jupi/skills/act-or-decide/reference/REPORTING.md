@@ -10,9 +10,14 @@ clusters, tripwires — and the person it was for could not use a word of it.
 
 ## The run log — the technical report
 
-Produced every run, in the narration, before the user's version. Returned, never written to a file
-(a scheduled run has no workspace folder anyone will read; a local reader is already in the
-conversation).
+The accountability artifact — but **availability, not ceremony, is the requirement, so where it is
+rendered depends on who is waiting**. An **unattended run** (a scheduled routine, the bench) always
+renders it in the transcript before the closing summary — that transcript is the only durable
+record. An **attended run** renders it only under `--technical`, on request afterwards, or in
+`--dry-run` (where the report IS the deliverable); otherwise the narration stays the lean
+per-stage lines and the user gets their version without sitting through tables they won't read.
+Returned, never written to a file (a scheduled run has no workspace folder anyone will read; a
+local reader is already in the conversation).
 
 1. **The dossier table** — one row per dossier in the window: **dossier · stage · next step ·
    verdict (ACT rule_ref / DECIDE link / WAIT-blocked / tripwire) · what happened**.
@@ -59,9 +64,10 @@ The rules that make it land:
 - **`--dry-run` = conditional everywhere** — *"what I'd handle"*, *"the decisions I'd put to
   you"*. Nothing has been done; past tense would claim work that didn't happen, and this report
   is often the first thing an owner ever reads from Jupi.
-- **Never show the person a shorter report than you logged**: blocks 3 and 4 appear even when
-  empty (one line each) — they are the ones the reader most needs and would never think to ask
-  for.
+- **Complete against the run's facts**: every dossier touched, every open handoff, every cut made
+  must appear — and blocks 3 and 4 appear even when empty (one line each), because they are the
+  ones the reader most needs and would never think to ask for. The user's version may be shorter
+  than a run log in words, never in facts.
 - **Close on posture, not config**: *"I'm in draft mode — nothing goes out without you."*
 
 ## Composition — how an orchestrating run reports
@@ -70,17 +76,20 @@ The rules that make it land:
 version, never a stack of per-skill reports: stitch the invoked skills' user versions into a
 single narrative in block order 1→4, deduplicating dossiers touched by more than one skill.
 `act-post-decision` (a synced skill — it carries no user's version of its own) returns its short
-technical summary; the orchestrator restates it into block 1. The invoked skills' run logs stay in
-the run's narration, available on request.
+technical summary; the orchestrator restates it into block 1. The invoked skills' technical
+reports follow the surface rule above: rendered in full in an unattended transcript, available on
+request in an attended one.
 
 ## The technical channel — `--technical`
 
-The run log is always produced — it precedes the user's version in the narration, so nothing is
-ever traded away for readability. For debugging, flip which one is the final message:
+What must never be traded away is the log's **availability**, not its unconditional rendering: an
+attended run holds every fact in its own context, so materializing the tables before every summary
+would only make the user wait through output they won't read (§run log — attended runs default to
+the lean narration). The channels:
 
 - **`--technical` on an invocation** (accepted by `act-or-decide`; `go` and `process-reply` pass
-  it through like `--dry-run`) → the final message IS the run log; no user's version required.
-- **In conversation** — "show me the technical detail" after any run re-renders the current run's
-  log from the narration.
-- **Routines have no switch**: debugging a scheduled run means opening its transcript, where the
-  run log already sits above the closing summary.
+  it through like `--dry-run`) → the final message IS the full run log; no user's version required.
+- **In conversation** — "show me the technical detail" after any run renders the current run's
+  log, faithfully, from the same session's context.
+- **Routines have no switch and need none**: an unattended transcript always carries the full run
+  log above the closing summary — debugging a scheduled run means opening it.

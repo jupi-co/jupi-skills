@@ -28,7 +28,8 @@ belongs to the skills you invoke; your job is sequence, lease, and run record.
 4. `db.mjs run-close <id>` honestly (`ok` | `degraded` | `failed`), then end with **one stitched
    user's version** of everything the invoked skills did (rules: act-or-decide's
    `reference/REPORTING.md`, §Composition — assistant voice, the user's language) — handoff
-   checklist included. The skills' run logs stay in the narration, available on request.
+   checklist included. The skills' technical reports follow REPORTING.md's surface rule — an
+   attended narration stays lean; the full logs come on request or under `--technical`.
 
 Nothing here writes anything the invoked skills don't; a `--dry-run` or `--technical` request
 passes through to `act-or-decide` untouched (`--technical` makes the run logs the final message —
