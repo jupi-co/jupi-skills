@@ -41,5 +41,6 @@ your own** — classification, guardrails and the next step all belong to the sk
 6. `db.mjs run-close <id>` honestly, then end with the user's version for that one dossier
    (rules: act-or-decide's `reference/REPORTING.md` — assistant voice, the user's language): the
    question now waiting with its clickable link, or *"a draft is ready in …"*, or the over-to-you
-   line — plus any outcome recorded and any suspension raised, said plainly. The planner's run log
-   stays in the narration; `--technical` passes through and makes it the final message.
+   line — plus any outcome recorded and any suspension raised, said plainly. The planner's
+   technical report stays available on request (attended narration stays lean — REPORTING.md's
+   surface rule); `--technical` passes through and makes it the final message.
