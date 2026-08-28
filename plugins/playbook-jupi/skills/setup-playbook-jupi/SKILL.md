@@ -59,6 +59,12 @@ is settled, and halt — a re-run resumes.
    and surface `errors[]` verbatim if `failed > 0`.
 4. **Sources present:** every `playbookSources` doc and the `dossierSource` resolve and are
    readable. A missing source is a prelude stop, not a mid-run surprise.
+5. **The playbook's name** — propose one extracted from the `playbookSources` (the main document's
+   title, or how the owner refers to the process) and have the owner confirm or correct it here;
+   on a re-run where a `playbook-name` entry already exists, show the current name and confirm.
+   Asked in the prelude, written at extraction (the reserved entry — §contract). This is the name
+   decisions and reports will use (*"as part of the playbook « <name> »"*), so it must be the
+   owner's word for it, not ours.
 
 > **✋ needs-you done — the rest runs unattended.**
 
@@ -89,6 +95,10 @@ Read every `playbookSources` document **in full**, then write the playbook's thr
    domain-specific ones the documents themselves reveal (the sensitive topics of *this* playbook's
    world). A tripwire's answer names the category and says **"human required"** — it never says
    what to do (§10.4).
+5. **The name**: write the reserved entry — `pb-upsert-entry` with `point_id: "playbook-name"`,
+   scope `'global'`, `answer` = the name confirmed in the prelude, `status: "declared"`,
+   provenance "owner, setup prelude" (or "doc title, confirmed by owner"). One row like any
+   other: idempotent, refreshed on re-run; renaming is this same upsert.
 
 **Be aggressive (§4).** Fifteen hypotheses with five wrong beats an empty playbook: a wrong
 `inferred` entry costs one badly-recommended option in a decision — corrected in ten seconds,
@@ -115,7 +125,9 @@ the same interface with another reader once its connector is present). For each 
 ## The projection — a rendering, never the truth (§7, §15.2)
 
 Rebuild `projectionTarget` **whole, from the rows** (`pb-get-stages` · `pb-list-entries` ·
-`pb-list-dossiers`) — never from the previous rendering. Six sections:
+`pb-list-dossiers`) — never from the previous rendering. **The document's H1 is the playbook's
+name** (the `playbook-name` entry: *Playbook « <name> »*) — the first line the owner reads. Then
+six sections:
 
 1. **Lifecycle** — the declared stages and terminal states.
 2. **Decision points & rules** — per entry: id · question · scope · current answer *or* **"not
@@ -159,7 +171,7 @@ version of what you do here:
 
 ## Report
 
-Per-step ✅/🔧/⚠️ throughout, then: stages declared · decision points and entries by status ·
+Per-step ✅/🔧/⚠️ throughout, then: the playbook's name · stages declared · decision points and entries by status ·
 **the holes, by name** (they are the co-construction backlog) · vigilance entries seeded ·
 dossiers by stage · what was owner-protected · any source unreadable and what it cost. Close with
 where the projection lives and the one line that frames the pilot: *the playbook will fill up as

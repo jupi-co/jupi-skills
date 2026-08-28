@@ -5,10 +5,12 @@
     {
       "id": 1,
       "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Fresh mirror world (bootstrap output, nothing validated). Run act-or-decide --dry-run.",
-      "expected_output": "Run-1 classification: every dossier gated by the two unvalidated points (contactability hole + sequence first-use); exactly 2 [BR] decisions PLANNED, 0 drafts; NOTHING written (no rows, no decisions, no entries, no refresh).",
+      "expected_output": "Run-1 classification: every dossier gated by the two unvalidated points (contactability hole + sequence first-use); exactly 2 rule-scale decisions PLANNED, 0 drafts; NOTHING written (no rows, no decisions, no entries, no refresh).",
       "files": [],
       "expectations": [
-        "The report plans exactly 2 [BR] decisions and 0 draft actions",
+        "The report plans exactly 2 rule-scale decisions and 0 draft actions",
+        "Planned decision titles are natural-language questions — no bracket codes, ids, or internal markers (never '[BR]')",
+        "Each planned decision's context opens with the playbook frame — the name from the playbook-name entry, or 'this playbook' with the missing entry flagged",
         "All 5 dossiers appear gated by both points in the report",
         "No Neon row, playbook entry, or Jupi decision was created (dry-run writes nothing)",
         "The report says the window is as-of the last real refresh (Stage 0 skipped)",
@@ -19,11 +21,11 @@
     {
       "id": 2,
       "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Seed the contactability point VALIDATED (direct contact OK) and the sequence-template point still declared/unvalidated. Run act-or-decide --dry-run.",
-      "expected_output": "The gate discriminates: the validated point pre-empts (would ACT with rule_ref, application logged on a real run); the declared point still raises the [BR] with its entry pre-filling the recommended option, provenance cited.",
+      "expected_output": "The gate discriminates: the validated point pre-empts (would ACT with rule_ref, application logged on a real run); the declared point still raises the rule-scale decision with its entry pre-filling the recommended option, provenance cited.",
       "files": [],
       "expectations": [
         "The contactability point no longer gates any dossier (validated entry cited as rule_ref)",
-        "Exactly 1 [BR] decision is planned, for the sequence point, with the declared template as the recommended option and its provenance in the option text",
+        "Exactly 1 rule-scale decision is planned, for the sequence point, with the declared template as the recommended option and its provenance in the option text",
         "The report notes the application that WOULD be logged for the rule-covered step (dry-run: not written)"
       ]
     },

@@ -112,11 +112,13 @@ on the same account:
 - `Playbook-Jupi — catchup`
 - `Playbook-Jupi — daily`
 
-One-line `description` field (required, plain language, phrased to match the cron you set):
-- catchup → "Through the workday, Jupi carries out what you've settled and picks up new
-  replies within the hour."
-- daily → "Once a day, Jupi runs the whole playbook: follow-ups due, next steps per dossier,
-  and anything that needs your call."
+One-line `description` field (required, plain language, phrased to match the cron you set —
+fill `<name>` from the reserved `playbook-name` entry at scheduling time; a rename refreshes
+them on the next scheduling re-run):
+- catchup → "Through the workday, Jupi carries out what you've settled on « <name> » and picks
+  up new replies within the hour."
+- daily → "Once a day, Jupi runs the whole « <name> » playbook: follow-ups due, next steps per
+  dossier, and anything that needs your call."
 
 ## Rotation
 

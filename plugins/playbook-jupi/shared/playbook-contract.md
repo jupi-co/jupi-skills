@@ -42,7 +42,7 @@ confusable at read time:
 The write side mirrors it: `pb-upsert-entry` with incoming `inferred`/`declared` creates or refreshes
 extraction-owned rows but is refused (`applied: false`) on a row whose status is
 `validated`/`suspended`. Those rows move only through the decision path — an upsert with incoming
-`status: 'validated'` (what `act-post-decision` performs when a `[BR]` decision settles) — or an
+`status: 'validated'` (what `act-post-decision` performs when a rule-scale decision settles) — or an
 explicit `pb-set-status` (suspension, §6).
 
 ## Entry semantics
@@ -57,7 +57,7 @@ explicit `pb-set-status` (suspension, §6).
   *discretion* was granted).
 - **`status`** lifecycle (§3): `inferred` (LLM-derived from sparse sources) → `declared` (verbatim
   and unambiguous from the owner's doc — same authority as inferred in V1, cheaper to confirm) →
-  `validated` (a finalized `[BR]` decision) ⇄ `suspended` (counter-evidence sent it back to
+  `validated` (a finalized rule-scale decision) ⇄ `suspended` (counter-evidence sent it back to
   case-by-case, §6 — automatic downward is allowed; upward always requires the owner).
 - **`version`**: 0 = never validated; every transition TO `validated` bumps it (`pb-upsert-entry`
   with validated, or `pb-set-status … validated`) — a re-validation or amendment is vN+1 (§6). The
@@ -79,6 +79,19 @@ explicit `pb-set-status` (suspension, §6).
   the engine never invents a frame the playbook didn't declare.
 - There is no CHECK on `tasks.stage` in the schema, on purpose — the schema stays
   lifecycle-agnostic; enforcement lives in the verbs against the declared list.
+
+## Reserved entries — the point ids the engine reads by convention
+
+Three point families are reserved; everything else in the store is the playbook's own vocabulary.
+
+- **`lifecycle-stages`** (above) — the declared lifecycle.
+- **`playbook-name`** (scope `'global'`) — the playbook's human name, proposed from the owner's
+  documents and confirmed in setup's prelude; it stays extraction-owned (`declared`), provenance
+  says who confirmed it. Consumers: the planner's decision contexts (*"as part of the playbook
+  « <name> »"*) and the reports. Absent → consumers say "this playbook" and flag the gap — a
+  missing name never blocks a run. Renaming is one ordinary upsert; nothing else to rotate.
+- **`tripwire-*`** — the vigilance entries (seeded at setup, extended any time; see the planner's
+  `tripwires.md` for how they bind).
 
 ## Dossier semantics (§8)
 
@@ -122,7 +135,7 @@ explicit `pb-set-status` (suspension, §6).
   questions, so the *verb itself* demotes. A `validated` entry whose counter reaches
   `config.suspendThreshold` (default 2), or any `severe` incident, flips to `suspended` inside
   `pb-note-outcome` (version unchanged) and the gate stops returning it instantly. The verb returns
-  `suspended: true`; **the caller raises the [BR] amendment decision** (re-validate / amend /
+  `suspended: true`; **the caller raises the rule-scale amendment decision** (re-validate / amend /
   retire — template 5) anchored on the triggering case: mechanical demotion, agentic escalation.
 - **Re-validation is the ordinary upward path** — the owner's amendment decision lands as
   `validated` vN+1 (via `pb-upsert-entry` at validated or `pb-set-status`), and the gate returns
