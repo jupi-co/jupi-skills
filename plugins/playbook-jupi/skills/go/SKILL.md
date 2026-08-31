@@ -18,14 +18,16 @@ A thin trigger over the catchup path. **You add no reasoning of your own** — e
 belongs to the skills you invoke; your job is sequence, lease, and run record.
 
 1. **The lease** (same rule as the routines — `reference/routine-prompts.md` in
-   `setup-playbook-jupi`): `db.mjs run-last <name> 1` for each of `catchup`, `daily`, `go`,
-   `process-reply`. A live run younger than `leaseMinutes` (config, default 10) → say "a run is
-   already working — it will pick this up" and stop. A stalled one → take over, and say so.
-2. `db.mjs run-open go` — the run record is what makes you visible to the lease and to `run-last`.
+   `setup-playbook-jupi`): `pb-run-last` (a tool on the installed Jupi connector, via ToolSearch)
+   for each of `catchup`, `daily`, `go`, `process-reply`. A live run younger than `leaseMinutes`
+   (config, default 10) → say "a run is already working — it will pick this up" and stop. A
+   stalled one → take over, and say so.
+2. `pb-run-open` (`go`) — the run record is what makes you visible to the lease and to
+   `pb-run-last`.
 3. **The catchup path, exactly**: `act-post-decision` (everything FINALIZED since last run is
    carried out, dossiers unblocked) → `refresh-backlog` (new inbound attached) → `act-or-decide`
    **restricted to the dossiers just unblocked or just attached** — the daily owns full sweeps.
-4. `db.mjs run-close <id>` honestly (`ok` | `degraded` | `failed`), then end with **one stitched
+4. `pb-run-close` honestly (`ok` | `degraded` | `failed`), then end with **one stitched
    user's version** of everything the invoked skills did (rules: act-or-decide's
    `reference/REPORTING.md`, §Composition — assistant voice, the user's language) — handoff
    checklist included. The skills' technical reports follow REPORTING.md's surface rule — an

@@ -16,9 +16,9 @@ its own **purpose** (tasks vs Facts) and its own **cursor keys**.
   - `update-brain` → `consumer='brain'`
   - `refresh-backlog` → `consumer='backlog'`
   - eval runs → `is_eval=true`, so real cursors are never advanced by tests.
-  Access via `db.mjs`: `get-cursor <consumer> <source> [eval]` /
-  `advance-cursor <consumer> <source> <cursor> [eval]` — the helper reads `jupiUserId`
-  from config and **scopes every query by `user_id` automatically** (you never pass it).
+  Access via the `pb-get-cursor` / `pb-advance-cursor` tools (consumer, source, optional
+  `eval` flag) on the installed Jupi connector — every call is **scoped server-side by the
+  connector's authenticated user** (you never pass a user id).
 - **Read-only.** Scanning never sends, comments, or mutates. Load MCP schemas via
   ToolSearch as needed; tool names may be namespaced by how each MCP is connected.
 - **Never fail silently.** If a tool is unreachable, note it in the run summary and do
@@ -32,7 +32,7 @@ its own **purpose** (tasks vs Facts) and its own **cursor keys**.
   crawl reads strictly *newer* content. A **forward-looking lookahead** (upcoming events
   for prep tasks) is a **separate, non-persisted query parameter** — it must never be
   written to `last_cursor`, or the next run goes blind until real time reaches that date.
-  (`db.mjs advance-cursor` clamps a future cursor to now as a backstop and warns — but
+  (`pb-advance-cursor` clamps a future cursor to now as a backstop and warns — but
   don't rely on the guard; pass the right marker.)
 - **Capture the stable id AND the permalink at *list* time.** `signal_ref` and `signal_url`
   are the dedup and Phase-3 decision keys — extract them in the *same* pass that reads the

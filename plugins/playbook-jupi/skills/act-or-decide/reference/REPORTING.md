@@ -75,8 +75,8 @@ The rules that make it land:
 `go`, `process-reply` and the scheduled routines invoke several skills and end with **one** user's
 version, never a stack of per-skill reports: stitch the invoked skills' user versions into a
 single narrative in block order 1→4, deduplicating dossiers touched by more than one skill.
-`act-post-decision` (a synced skill — it carries no user's version of its own) returns its short
-technical summary; the orchestrator restates it into block 1. The invoked skills' technical
+`act-post-decision` (orchestrator-facing — its summary is written for the caller) returns its
+short technical summary; the orchestrator restates it into block 1. The invoked skills' technical
 reports follow the surface rule above: rendered in full in an unattended transcript, available on
 request in an attended one.
 
