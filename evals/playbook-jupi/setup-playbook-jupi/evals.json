@@ -4,8 +4,8 @@
   "evals": [
     {
       "id": 1,
-      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Run setup-playbook-jupi end to end with playbookSources=[dev/mirror/owner-doc.md, dev/mirror/sequence-partner.md], dossierSource=dev/mirror/accounts.csv, projectionTarget=./playbook.local.md (scratch).",
-      "expected_output": "Lifecycle declared (6 stages incl. terminal states); 15+ entries split declared/inferred with provenance on every one; at least 3 declared holes including the per-broker contactability caution AND the booking-flow contradiction (15-min qualification vs direct 45-min link); tripwire entries seeded (7 generic + at least one domain-derived); ZERO entries at status validated; 5 dossiers; projection rendered with holes explicit.",
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Run setup-playbook-jupi end to end with playbookSources=[dev/mirror/owner-doc.md, dev/mirror/sequence-partner.md], dossierSource=dev/mirror/accounts.csv, projectionTarget=./playbook.local.md (scratch). Prelude answers: accept the playbook name proposed from the owner doc.",
+      "expected_output": "Lifecycle declared (6 stages incl. terminal states); 15+ entries split declared/inferred with provenance on every one; at least 3 declared holes including the per-broker contactability caution AND the booking-flow contradiction (15-min qualification vs direct 45-min link); tripwire entries seeded (7 generic + at least one domain-derived); a playbook-name reserved entry (declared) carrying the confirmed name; ZERO entries at status validated; 5 dossiers; projection titled with the name, holes explicit.",
       "files": [],
       "expectations": [
         "The lifecycle is declared via pb-declare-stages with the 6 stages and doc provenance",
@@ -13,7 +13,8 @@
         "At least 3 entries are declared holes (answer NULL), including the per-broker contactability point and the booking-flow contradiction",
         "No entry anywhere has status 'validated' (pb-list-entries --status validated is empty)",
         "Generic tripwire entries are seeded plus at least one domain-specific one, none saying what to do — only 'human required'",
-        "The projection file contains the six sections and renders every hole as 'not established'"
+        "A playbook-name reserved entry exists at scope global, status declared, with provenance naming who confirmed it",
+        "The projection file's H1 carries the playbook's name, contains the six sections, and renders every hole as 'not established'"
       ]
     },
     {
@@ -35,6 +36,7 @@
       "files": [],
       "expectations": [
         "Dossier and entry counts are unchanged after the re-run (no duplicates)",
+        "The playbook-name entry is not duplicated and its name survives the re-run",
         "The validated persona-priority entry keeps its answer, status and version",
         "The report lists it as owner-protected, not as an error",
         "No dossier's stage was reset by the re-run"

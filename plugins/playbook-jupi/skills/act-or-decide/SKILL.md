@@ -54,8 +54,9 @@ is the prior, decisions are the evidence, rules are the posterior (§1).
 3. **The frame** (all via `node "${CLAUDE_PLUGIN_ROOT}/shared/playbook.mjs" …`):
    `pb-get-stages` (no lifecycle → not bootstrapped → report and stop) · `pb-list-dossiers` (the
    closed world) · `pb-list-entries` (the whole map, read in full: validated rules, inferred/declared
-   material, **the holes**, and the `tripwire-*` entries — with `reference/tripwires.md` for how
-   tripwires bind).
+   material, **the holes**, the `tripwire-*` entries — with `reference/tripwires.md` for how
+   tripwires bind — and the reserved `playbook-name` entry, the human name used in decision
+   contexts and reports; absent → say "this playbook" and flag the gap in the report, never block).
 4. **Run args**: `--dry-run` (classify and report, write NOTHING — no refresh, no research writes, no
    decisions, no rows, no delegation) · `--perform` (real verbs this run) · `--technical` (the final
    message is the run log, not the user's version — `reference/REPORTING.md`, the debugging channel).
@@ -118,9 +119,12 @@ Per decision point touched:
   `decisionBudget`** — every cluster cut goes in the report's Deferred block with why.
 - **Author from the templates** — `reference/decision-templates.md` fixes the shape per point type
   (scoped-rule first instance, parameter, asset, out-of-script, amendment). Same point type, same
-  shape, every time: legibility for the owner, exact recurrence metrics for us.
-- **Structural first instance** (§5): a scoped point raised for the first time is a **`[BR]` at rule
-  scale from the start** — the *codify* option bundles the rule write (an option-action that
+  shape, every time: legibility for the owner, exact recurrence metrics for us. **The title is the
+  question to settle** (natural language, the user's language, no internal markers), and the
+  context opens with the playbook frame — the reserved `playbook-name` entry read at Boot.
+- **Structural first instance** (§5): a scoped point raised for the first time is **raised at rule
+  scale from the start** (a *rule-scale* decision — formerly the `[BR]` title prefix; the marker
+  never goes in a posted title again) — the *codify* option bundles the rule write (an option-action that
   performs `pb-upsert-entry` at `validated` on settle, via act-post-decision) **plus** the
   operational actions for every clustered dossier; the *just-this-once* option carries only the
   operational actions — and the recurrence counter keeps counting. Repeated just-this-once (≥

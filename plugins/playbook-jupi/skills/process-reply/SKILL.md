@@ -34,8 +34,8 @@ your own** — classification, guardrails and the next step all belong to the sk
    line — *"the draft that preceded this reply: sent as-is, edited, or dropped?"* — and record it:
    `pb-note-outcome <id> <as_is|edited|abandoned> "<who>"` (append `severe` for a genuine
    incident). **If the verb returns `suspended: true`, the entry just went back to case-by-case
-   automatically (§6 — down is the conservative direction): raise the [BR] amendment decision NOW**
-   (template 5 — re-validate as-is / amend / retire), anchored on this concrete case, and say in
+   automatically (§6 — down is the conservative direction): raise the amendment decision NOW**
+   (template 5, rule-scale — re-validate as-is / amend / retire), anchored on this concrete case, and say in
    the report that the rule is suspended pending the owner's call. No answer → leave it `unknown`,
    never guess.
 6. `db.mjs run-close <id>` honestly, then end with the user's version for that one dossier
