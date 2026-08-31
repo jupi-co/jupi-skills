@@ -25,8 +25,12 @@ belongs to the skills you invoke; your job is sequence, lease, and run record.
 3. **The catchup path, exactly**: `act-post-decision` (everything FINALIZED since last run is
    carried out, dossiers unblocked) → `refresh-backlog` (new inbound attached) → `act-or-decide`
    **restricted to the dossiers just unblocked or just attached** — the daily owns full sweeps.
-4. `db.mjs run-close <id>` honestly (`ok` | `degraded` | `failed`), and return the skills' own
-   reports — including the handoff checklist if one came back.
+4. `db.mjs run-close <id>` honestly (`ok` | `degraded` | `failed`), then end with **one stitched
+   user's version** of everything the invoked skills did (rules: act-or-decide's
+   `reference/REPORTING.md`, §Composition — assistant voice, the user's language) — handoff
+   checklist included. The skills' technical reports follow REPORTING.md's surface rule — an
+   attended narration stays lean; the full logs come on request or under `--technical`.
 
-Nothing here writes anything the invoked skills don't; a `--dry-run` request passes through to
-`act-or-decide` untouched.
+Nothing here writes anything the invoked skills don't; a `--dry-run` or `--technical` request
+passes through to `act-or-decide` untouched (`--technical` makes the run logs the final message —
+the debugging channel).

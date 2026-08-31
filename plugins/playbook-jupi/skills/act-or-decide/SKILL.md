@@ -57,7 +57,8 @@ is the prior, decisions are the evidence, rules are the posterior (§1).
    material, **the holes**, and the `tripwire-*` entries — with `reference/tripwires.md` for how
    tripwires bind).
 4. **Run args**: `--dry-run` (classify and report, write NOTHING — no refresh, no research writes, no
-   decisions, no rows, no delegation) · `--perform` (real verbs this run).
+   decisions, no rows, no delegation) · `--perform` (real verbs this run) · `--technical` (the final
+   message is the run log, not the user's version — `reference/REPORTING.md`, the debugging channel).
 
 ## The flow
 
@@ -181,14 +182,18 @@ gesture itself**. Mechanics:
 - The definitive surface is an open design question (§12) — the report checklist is the minimal
   denominator that doesn't prejudge it.
 
-### Reporting — dossier-centric, every run
-One table, all dossiers: **dossier · stage · next step · verdict (ACT rule_ref / DECIDE link /
-WAIT-blocked / tripwire) · what happened**. Then **Deferred** (budget cuts, with scores of leverage
-— dossiers unblocked), **☐ Handoffs — over to you** (the checklist: every open `tool: handoff` row —
-title · what Jupi prepared · dossier link · how long it has been waiting), **Unmatched guardrail
-events** (tripwire hits, out-of-script), and the footer:
-mode · decisionBudget · what this run left for the next one. `--dry-run`: this report IS the
-deliverable — say the window is as-of the last real refresh. Return it; write no files.
+### Reporting — two audiences, every run
+`reference/REPORTING.md` fixes both versions — read it before writing a word of either. The **run
+log** (the dossier table: dossier · stage · next step · verdict ACT rule_ref / DECIDE link /
+WAIT-blocked / tripwire · what happened; then Deferred, the ☐ Handoffs checklist, guardrail
+events, and the footer mode · decisionBudget · what this run left for the next one) renders **only
+where someone will read it**: always in an unattended transcript (routine, bench); in attended
+runs only under `--technical`, on request, or in `--dry-run` — otherwise the narration stays the
+lean per-stage lines, so the user is not made to wait through tables. The **user's version** — the
+assistant-voiced four-block rendering in the user's language, no engine vocabulary — is the
+**final message by default**; under `--technical` the run log is the final message instead.
+`--dry-run`: the report IS the deliverable — both versions, all of it in the conditional — say the
+window is as-of the last real refresh. Return it; write no files.
 
 ## Guardrails summary (§10 — the honest frame)
 Bounded (draft-first + the gate), detected fast (residue test, tripwires, independent re-read),
@@ -211,5 +216,7 @@ never your own judgment.
 - **Never**: the user's tools, Facts, `validated` entries, files. The report is returned, not written.
 
 ## Narrate + return
-Narrate per stage (✅/🔧/⚠️). Return the dossier table + deferred + guardrail events + footer — and
-in dry-run, exactly that with zero writes behind it.
+Narrate per stage (✅/🔧/⚠️), lean — the full run log renders only where `reference/REPORTING.md`
+says it does (unattended transcript, `--technical`, on request, dry-run). End with the user's
+version, or the run log itself under `--technical` — and in dry-run, both, with zero writes
+behind them and every claim in the conditional.
