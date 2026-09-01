@@ -65,22 +65,27 @@ is settled, and halt — a re-run resumes.
    Asked in the prelude, written at extraction (the reserved entry — §contract). This is the name
    decisions and reports will use (*"as part of the playbook « <name> »"*), so it must be the
    owner's word for it, not ours.
-5. **The brain (Supermemory) — optional, and offered here or never.** Probe the memory connector
-   with a cheap `recall`. **Present → one line and move on** (*"memory connector detected — Jupi
-   will remember what it learns about your world"*); never raise API keys when a connector is
-   already there. **Absent → onboard, don't error** — say three things, in the user's language:
-   - **What it buys them, concretely**: Jupi remembers the people, companies and projects it meets
-     across runs instead of re-learning them every time · it picks up how they write to each
-     contact, so drafts land in their own register without re-reading their sent mail on every
-     run · decisions arrive carrying context on who the counterparty is.
-   - **That the playbook runs fine without it** — nothing here is blocked: the process, the rules,
-     the dossiers and the decisions all work. It simply asks more questions and pays more per
-     draft.
-   - **The steps, if they want it**: create an account at app.supermemory.ai → copy the API key
-     (`sm_…`) → add it as an **MCP connector** (custom MCP server, URL
-     `https://mcp.supermemory.ai/mcp`, header `Authorization: Bearer sm_<key>`) → tell you when
-     it's done and you re-probe. Mention that connecting now buys one bounded first pass over the
-     connected tools at the end of setup, so it isn't empty on day one.
+5. **The brain (Supermemory) — optional, and the point is to bring an existing one.** The value is
+   **connecting the memory the user already has**, so Jupi arrives knowing their company's world
+   rather than learning it from zero; creating a store is the fallback, not the pitch. Probe the
+   connector with a cheap `recall` on the container tag:
+   - **Connected, and it knows things** → the good case: say what carried over, in one line
+     (*"your memory is connected — Jupi already knows your people and accounts"*), and move on.
+     Never raise API keys when a connector is present.
+   - **Connected but empty under this workspace's tag** → say so plainly, because it is rarely
+     what the user expects: the brain reads and writes under `user_<their Jupi id>`, so memories
+     another tool wrote under a different container tag are **not visible here** (a brain built
+     under the same Jupi identity carries over on its own; a company-wide container does not,
+     today). Offer the first pass below to start one from their connected tools.
+   - **No connector → onboard, don't error** — three things, in the user's language: **what it
+     buys them** (Jupi remembers the people, companies and projects it meets across runs instead
+     of re-learning them; it picks up how they write to each contact, so drafts land in their own
+     register without re-reading their sent mail every run; decisions arrive carrying context on
+     the counterparty) · **that the playbook runs fine without it** (nothing blocked — it just
+     asks more questions and pays more per draft) · **the steps**: if their company already has a
+     Supermemory, connect it as an **MCP connector** (custom MCP server, URL
+     `https://mcp.supermemory.ai/mcp`, header `Authorization: Bearer sm_<key>`); if not, an
+     account at app.supermemory.ai issues the key first. Then they tell you, and you re-probe.
 
    **"Not now" or no answer is a complete answer**: note it, continue, and say it once in the
    closing report (*"running without a brain — re-run setup any time to add it"*). Never block,
@@ -142,14 +147,16 @@ the same interface with another reader once its connector is present). For each 
   contact-identified stage) — judge per row and say so in the report.
 - Idempotent: re-running refreshes summaries, never resets stage or status.
 
-## The brain's first pass — only when one was just connected
+## The brain's first pass — only when it knows nothing yet
 
-If the prelude connected a brain (and only then), invoke **`update-brain`** once in `full` mode
-with a **small, stated budget** — enough that the first planner run has context, not a history
-crawl. It verifies its own writes; carry its ⚠️ into your report rather than reporting a blind
-success. **No brain → skip it and say so in one line**, never silently do nothing. *(From there
-the brain fills two ways: the planner's targeted lookups when it meets an entity it doesn't know,
-and the daily routine's Friday refresh.)*
+**A brain that arrived with content needs no seeding** — bringing an existing one is the whole
+point, and re-crawling would spend credits re-learning what it already holds. Only when the
+prelude's probe found the store **empty for this tag** (and the user agreed) invoke
+**`update-brain`** once in `full` mode with a **small, stated budget** — enough that the first
+planner run has context, not a history crawl. It verifies its own writes; carry its ⚠️ into your
+report rather than reporting a blind success. **Already populated, or no brain at all → skip it
+and say which, in one line.** *(From there it fills two ways: the planner's targeted lookups when
+it meets an entity it doesn't know, and the daily routine's Friday refresh.)*
 
 ## The projection — a rendering, never the truth (§7, §15.2)
 
