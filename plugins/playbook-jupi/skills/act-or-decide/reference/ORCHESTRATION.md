@@ -1,5 +1,3 @@
-<!-- synced from proactive-jupi@df18ff5 — verbatim copy (fork policy, design §1): edit the plugins/proactive-jupi original, then re-copy; do not edit here -->
-
 # act-or-decide — ORCHESTRATION (producer ↔ validator loop)
 
 How a DECIDE draft clears the gate before it reaches the user, **autonomously in a routine**. This is the
@@ -43,8 +41,8 @@ Three texts, all **returned, never written to disk**:
 **Why not files.** A sub-agent can't write one anyway (it returns text), and the orchestrator shouldn't
 either: under a scheduled routine there is no workspace folder, and anything written to the run's own
 container is discarded with it. The orchestrator assembles the texts the producer and validator return and
-hands them up — the routine's run record (`db.mjs run-open`/`run-close`) is what persists, and the durable
-substance is already in Neon and Jupi.
+hands them up — the routine's run record (`pb-run-open`/`pb-run-close`) is what persists, and the durable
+substance is already in the playbook store and Jupi.
 
 ## Autonomy
 No human in the loop during the run: the only exit door to the user is a **PASS** (a posted decision) or a

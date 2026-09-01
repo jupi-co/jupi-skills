@@ -5,10 +5,10 @@ description: >-
   — priority is stage-driven, never a score. Rule
   lookup is an EXACT match: pb-get-rule(point, scope) returns only owner-validated entries — a hit
   means ACT (draft-gated, rule_ref on the row); a hole or unvalidated entry means DECIDE, with the
-  inferred/declared entry pre-filling the recommended option, provenance cited. It digs before it
-  asks, clusters dossiers blocked by the same point into ONE decision, and guards attached inbound
-  (tripwires, residue test, raw-message re-read before any ACT). Writes only
-  Neon + Jupi — never the user's tools (execute-action does). Use whenever the process should
+  inferred/declared entry pre-filling the recommended option, provenance cited. It digs before
+  asking, clusters dossiers blocked by the same point into ONE decision, and guards attached inbound
+  (tripwires, residue test, raw-message re-read before any ACT). Writes only the playbook
+  store + Jupi — never the user's tools (execute-action does). Use whenever the process should
   advance: "run the playbook", "work the dossiers", "what's the next step per dossier", "plan the
   next moves". Supports --dry-run. Not for: attaching inbound (refresh-backlog), tool writes
   (execute-action), finalized decisions (act-post-decision), or Facts (update-brain).
@@ -23,17 +23,20 @@ not "act"** (§10.1). Per dossier the question is never "what matters most?" but
 declared process say comes next — and do we have the owner-validated answer it needs?"** The playbook
 is the prior, decisions are the evidence, rules are the posterior (§1).
 
-> **You write ONLY to Neon (action rows, dossier gating/status) and Jupi (decisions). You NEVER touch
-> the user's tools** — you queue `ready` rows for the **`execute-action`** worker, then record its
-> traces. Materializing a draft is a tool write, and it is not yours.
+> **You write ONLY to the playbook store (action rows, dossier gating/status — via the `pb-*`
+> tools) and Jupi (decisions). You NEVER touch the user's tools** — you queue `ready` rows for the
+> **`execute-action`** worker, then record its traces. Materializing a draft is a tool write, and
+> it is not yours.
 
-> **Workspace-relative.** `.playbook-jupi/config.local.json` resolves against the CWD walking up
-> (`.proactive-jupi/` fallback). Shared helpers under **`${CLAUDE_PLUGIN_ROOT}/shared/`**; every
-> `playbook.mjs`/`db.mjs` call is tenant-scoped automatically.
+> **The store is the Jupi connector.** Every `pb-*` verb below is an MCP tool on the installed
+> Jupi connector — load them via ToolSearch by logical name (the runtime resolves the server) —
+> and every call is tenant-scoped server-side from the connector's auth; you never pass or see a
+> user id (`shared/playbook-contract.md`). Config (`.playbook-jupi/config.local.json`, walking up
+> from the CWD) carries only non-secret tunables.
 
 ## Contract (hard — never transgress)
-- ✅ **Write only Neon + Jupi.** Neon via the shared helpers (never hand-written SQL); Jupi via
-  `create-decision-tool` — **private, STARTED, never finalize**.
+- ✅ **Write only the playbook store + Jupi.** The store via the `pb-*` tools (never any other
+  path); Jupi via `create-decision-tool` — **private, STARTED, never finalize**.
 - ❌ **No tool side-effects** — no sending, drafting, posting, booking. `execute-action` is the only
   tool-writer; you hand it rows and record `executed` + trace on `ok:true`.
 - ❌ **Only `pb-get-rule` authorizes an act.** It returns owner-validated entries and nothing else —
@@ -50,8 +53,9 @@ is the prior, decisions are the evidence, rules are the posterior (§1).
 1. **Config**: `guardrails` (`mode` draft/perform — default `draft`; `decisionBudget` default `5`),
    `jupiWorkspace`, `inboundStage`. Any missing key takes its default; a half-filled block never
    reads as "unbounded".
-2. **Deps**: `bash "${CLAUDE_PLUGIN_ROOT}/shared/ensure-deps.sh"`.
-3. **The frame** (all via `node "${CLAUDE_PLUGIN_ROOT}/shared/playbook.mjs" …`):
+2. **Tools**: load the `pb-*` and decision tools you'll use from the installed Jupi connector via
+   ToolSearch. A connector that doesn't serve them → report and stop (nothing to run against).
+3. **The frame**:
    `pb-get-stages` (no lifecycle → not bootstrapped → report and stop) · `pb-list-dossiers` (the
    closed world) · `pb-list-entries` (the whole map, read in full: validated rules, inferred/declared
    material, **the holes**, the `tripwire-*` entries — with `reference/tripwires.md` for how
@@ -66,7 +70,7 @@ is the prior, decisions are the evidence, rules are the posterior (§1).
 ### Stage 0 — Refresh + sweep
 Invoke **`refresh-backlog`** (the inbound watch) so attachments are current — **except in
 `--dry-run`**, which reasons over the world as it stands and says so. Then sweep orphans:
-`db.mjs list-actions status ready` — rows a prior run queued but never recorded; hand them to the
+`pb-list-actions` (`status: ready`) — rows a prior run queued but never recorded; hand them to the
 worker with this run's batch *(skip in dry-run)*.
 
 ### Stage 1 — The window, stage-driven
@@ -97,15 +101,20 @@ is a **handoff**, not a tool action. Jupi prepares everything preparable; the hu
 
 ### Stage 3 — Rule lookup, then dig before ask
 Per decision point touched:
-1. **The gate**: `pb-get-rule <point_id> <scope_key>`, then `pb-get-rule <point_id>` (global). A hit
+1. **The gate**: `pb-get-rule` on `(point_id, scope_key)`, then on `point_id` alone (global). A hit
    is owner-authorized by construction: **ACT** — plan the step's actions with the entry's id as
    `rule_ref` (§6's visibility precondition starts here). A validated `always_ask` hit means: raise
    the instance decision, **without** any codify option (the owner already settled *how* this point
    is handled: case by case). A validated `delegated` hit acts like a rule; say in the trace that the
    discretion, not the answer, was granted.
 2. **No validated answer → dig before ask** (§8 walkthrough). One bounded research pass per point:
-   the attached thread, `search-decisions-tool` for prior settlements of this same point,
-   `recall` on the entities involved. If research **settles** it, that becomes the pre-filled
+   the attached thread, `search-decisions-tool` for prior settlements of this same point, and
+   `recall` on the entities involved **when a memory connector is present** — **no brain is a
+   supported configuration, not a failure**: skip that move, dig with the other two, and say once
+   in the report that you're running without one (it costs context, never authority — the gate is
+   unaffected). **Either way, name what you still didn't know** — the person, the org, the fact —
+   in the report's Gaps block: with a brain that's what it couldn't answer, without one it's what
+   a brain would have. If research **settles** it, that becomes the pre-filled
    recommendation — write it back as an `inferred` entry (provenance: what you found) so the next
    run starts ahead; *(in dry-run: reason from reads only, write nothing, and say what you'd have
    recorded)*. If research doesn't settle it → **DECIDE**.
@@ -124,8 +133,8 @@ Per decision point touched:
   context opens with the playbook frame — the reserved `playbook-name` entry read at Boot.
 - **Structural first instance** (§5): a scoped point raised for the first time is **raised at rule
   scale from the start** (a *rule-scale* decision — formerly the `[BR]` title prefix; the marker
-  never goes in a posted title again) — the *codify* option bundles the rule write (an option-action that
-  performs `pb-upsert-entry` at `validated` on settle, via act-post-decision) **plus** the
+  never goes in a posted title again) — the *codify* option bundles the rule write (an option-action
+  that performs `pb-upsert-entry` at `validated` on settle, via act-post-decision) **plus** the
   operational actions for every clustered dossier; the *just-this-once* option carries only the
   operational actions — and the recurrence counter keeps counting. Repeated just-this-once (≥
   threshold) → propose **"always ask me" as a validated rule**: it stops the nagging while keeping
@@ -136,10 +145,10 @@ Per decision point touched:
   user — no PASS, no post. Then `create-decision-tool` (`groupSlug: jupiWorkspace`,
   `allowWorkspaceContributions: false`, STARTED), options via `add-decision-options-tool`,
   structured option-actions via `add-option-actions-tool` (`{title, instruction, tool}` — full
-  executable text; these live in Jupi, never in Neon). Description is HTML, links everywhere, say
-  **"Jupi"** never the plugin name. Capture the returned `url`.
-- **Gate the dossiers**: `db.mjs set-task-gating <dossier_id> '["<decision_id>"]'` +
-  `set-task-status <dossier_id> blocked` for every clustered dossier. `act-post-decision` unblocks
+  executable text; these live in Jupi, never in the store). Description is HTML, links everywhere,
+  say **"Jupi"** never the plugin name. Capture the decision permalink the tool returns.
+- **Gate the dossiers**: `pb-set-task-gating` (the dossier, the decision id array) +
+  `pb-set-task-status` → `blocked` for every clustered dossier. `act-post-decision` unblocks
   at settle. *(Dossiers are long-lived: you never set them `done` — terminal is a stage, not a
   status.)*
 
@@ -153,36 +162,37 @@ closed-world simplification that confidence came from the gate itself:
   validator re-reads **the raw message** — not your summary — with one question: *"does this plan
   respond to everything material in this message, and to nothing that isn't there?"* RETURN →
   the item goes DECIDE, never silently dropped.
-- Emit: `db.mjs insert-action '<json>'` (`task_id` = the dossier, `tool`, `description` with the
+- Emit: `pb-insert-action` (`task_id` = the dossier, `tool`, `description` with the
   exact call + thread id for replies, **`rule_ref`** — the entry id that authorized it, `exposure`).
   *(dry-run: record for the table, write nothing.)*
 - **Log the application** the moment a rule-covered ACT is emitted (§6's ledger, the visibility
-  precondition made material): `playbook.mjs pb-log-application '{"entry_id": <the rule entry>,
-  "task_id": <dossier>, "action_id": <the inserted row>}'`. Its fate arrives later
+  precondition made material): `pb-log-application` (`entry_id` = the rule entry, `task_id` = the
+  dossier, `action_id` = the inserted row). Its fate arrives later
   (`pb-note-outcome`, declarative V1 — the entry points and the Friday review collect it).
   *(dry-run: skip.)*
 - **Hand off** the `ready` rows **except `tool: handoff`** to **`execute-action`** (a handoff has
   no tool write to perform — the worker never sees one; it is rendered to the human instead, below);
   on `{ok:true, trace}` →
-  `set-action-status <id> executed <trace>`; `ok:false` rows stay `ready` for the next sweep. Then
-  advance the dossier's stage if the step completed it (`pb-set-stage`, e.g. sequence advanced →
-  detail = next step index).
+  `pb-set-action-status` → `executed` + the trace; `ok:false` rows stay `ready` for the next sweep.
+  Then advance the dossier's stage if the step completed it (`pb-set-stage`, e.g. sequence advanced
+  → detail = next step index).
 
 ### Handoffs — the steps the human executes (§8, §11 item 7)
 A `handoff` is a first-class action the plan produces when the executor is the operator, not a tool:
 identify a contact when no source has it, network outreach, the phone fallback, and **the send
 gesture itself**. Mechanics:
-- **Emit** it like any ACT — `insert-action` with `tool: "handoff"`, the `description` carrying
+- **Emit** it like any ACT — `pb-insert-action` with `tool: "handoff"`, the `description` carrying
   everything Jupi could prepare (who · what · the prepared content or its location · the dossier) —
-  **but dedup first**: `list-actions status ready`, and if an open handoff for the same dossier and
-  step already exists, do **not** insert a second one. An outstanding handoff is re-*listed*, never
-  re-*proposed*.
+  **but dedup first**: `pb-list-actions` (`status: ready`), and if an open handoff for the same
+  dossier and step already exists, do **not** insert a second one. An outstanding handoff is
+  re-*listed*, never re-*proposed*.
 - **Never hand it to `execute-action`** — there is nothing to perform; its surface is the human.
 - **Render every open handoff as the run report's checklist** (below) — new ones and outstanding
   ones alike, so nothing silently ages out.
 - **Mark it done only on the human's word** — when they say it's done (in conversation, or via an
-  entry point), `set-action-status <id> executed "human: done — <their words>"`, and advance the
-  dossier's stage if the step completed it. Until then it stays `ready` and keeps appearing.
+  entry point), `pb-set-action-status` → `executed`, trace `"human: done — <their words>"`, and
+  advance the dossier's stage if the step completed it. Until then it stays `ready` and keeps
+  appearing.
 - The definitive surface is an open design question (§12) — the report checklist is the minimal
   denominator that doesn't prejudge it.
 
@@ -214,8 +224,9 @@ owner. Adding needs no ceremony; **weakening any tripwire always goes through an
 never your own judgment.
 
 ## Where you write
-- **Neon** (helpers only): `ready` action rows + `executed` statuses, dossier `blocked` +
-  `gating_decision_ids`, stage advances on completed steps, research-grade `inferred` entries.
+- **The playbook store** (`pb-*` tools only): `ready` action rows + `executed` statuses, dossier
+  `blocked` + gating, stage advances on completed steps, research-grade `inferred` entries,
+  application-ledger rows.
 - **Jupi**: decisions (private, STARTED) via the validator loop.
 - **Never**: the user's tools, Facts, `validated` entries, files. The report is returned, not written.
 

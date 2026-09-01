@@ -18,7 +18,8 @@ disable-model-invocation: false
 A thin trigger over the watch + planner, scoped to a single dossier. **You add no reasoning of
 your own** — classification, guardrails and the next step all belong to the skills you invoke.
 
-1. **The lease** (same four names, same rule as `go`), then `db.mjs run-open process-reply`.
+1. **The lease** (same four names, same rule as `go` — `pb-run-last`), then `pb-run-open`
+   (`process-reply`).
 2. **`refresh-backlog`** — the normal sweep: it attaches the new inbound to its dossier (or
    reports it `unmatched`/`ambiguous`). If the user pointed at a specific mail, make sure the sweep
    window covers it; you never bypass the watch's matching by attaching by hand.
@@ -30,7 +31,7 @@ your own** — classification, guardrails and the next step all belong to the sk
    touched, or reported beyond one context line.
 5. **The outcome question (§6, declarative V1)** — the operator is right here, which makes this
    the cheapest moment: if this dossier carries applications with outcome `unknown`
-   (`playbook.mjs pb-list-applications --outcome unknown`, filter to this dossier), ask in one
+   (`pb-list-applications`, outcome `unknown`, filtered to this dossier), ask in one
    line — *"the draft that preceded this reply: sent as-is, edited, or dropped?"* — and record it:
    `pb-note-outcome <id> <as_is|edited|abandoned> "<who>"` (append `severe` for a genuine
    incident). **If the verb returns `suspended: true`, the entry just went back to case-by-case
@@ -38,7 +39,7 @@ your own** — classification, guardrails and the next step all belong to the sk
    (template 5, rule-scale — re-validate as-is / amend / retire), anchored on this concrete case, and say in
    the report that the rule is suspended pending the owner's call. No answer → leave it `unknown`,
    never guess.
-6. `db.mjs run-close <id>` honestly, then end with the user's version for that one dossier
+6. `pb-run-close` honestly, then end with the user's version for that one dossier
    (rules: act-or-decide's `reference/REPORTING.md` — assistant voice, the user's language): the
    question now waiting with its clickable link, or *"a draft is ready in …"*, or the over-to-you
    line — plus any outcome recorded and any suspension raised, said plainly. The planner's

@@ -6,6 +6,16 @@ would test nothing) · **Sheet/Notion as local files** (`dev/mirror/accounts.csv
 file) · **Calendar deferred**. The fake world it runs is [`dev/mirror/`](mirror/README.md) — read that
 README's cast and zero-real-entities rule first.
 
+> **⚠️ Status: this runbook is Neon-era and does not run as written (TECH-547).** playbook-jupi's
+> store moved behind the `pb-*` MCP tools on the Jupi connector, so the plugin no longer reads a
+> connection string and no longer has `db.mjs`/`playbook.mjs`/`ensure-deps.sh`/`apply-schema.mjs`
+> — while `dev/seed.mjs` and `dev/reset.mjs` still write and purge **Neon** directly, which the
+> skills no longer read. Everything below stays the spec of what the bench must do (the fake
+> world, the safety model, the cycle, the reset semantics); **the seeding and reset path has to be
+> re-pointed at the backend** once it serves the tools, together with the test-tenant story
+> deferred with the evals (see `evals/playbook-jupi/README.md`). Steps 3–4 of the one-time setup
+> (Neon string, `ensure-deps.sh`, `apply-schema.mjs`) are already obsolete for the plugin itself.
+
 ## Safety model (why this can't touch anything real)
 
 | Layer | Mechanism |
@@ -34,9 +44,9 @@ cp dev/config.template.json .playbook-jupi/config.local.json
 cp .playbook-jupi/config.local.json .proactive-jupi/config.local.json
 ```
 
-The second copy matters (found live in the Phase-2 test): the parity-locked `db.mjs` — which the
-verbatim-copied skills and the gating verbs run through — only walks `.proactive-jupi/`, while
-`playbook.mjs` reads either. Both paths are gitignored; keep the two copies identical.
+*(The second copy was needed while the fork ran on the parity-locked `db.mjs`, which only walked
+`.proactive-jupi/`. Since TECH-547 the plugin reads `.playbook-jupi/` only, and holds no secret —
+the second copy now serves the Neon-era bench scripts alone, until they are re-pointed.)*
 
 ```bash
 bash plugins/playbook-jupi/shared/ensure-deps.sh

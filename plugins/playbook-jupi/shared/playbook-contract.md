@@ -1,9 +1,10 @@
 # The playbook contract — entries, the gate, dossiers
 
-What `shared/playbook.mjs` guarantees to its consumers (the extraction skill, the planner,
-`act-post-decision`, the dev bench). schema.sql (same dir) is the authoritative schema; design
-references ("§N") point to the internal plugin-design doc. db.mjs is byte-parity-locked with
-proactive-jupi, which is why everything here lives in a sibling file.
+What the **`pb-*` tools on the Jupi connector** guarantee to their consumers (the extraction
+skill, the planner, `act-post-decision`, the dev bench). The tools are served by Jupi's backend
+(the `playbook` module — spec: JUPI-604); the tables live in Jupi's own database, and this file is
+the semantic contract the skills program against. Design references ("§N") point to the internal
+plugin-design doc.
 
 ## What a playbook is — and what the engine is not
 
@@ -21,8 +22,18 @@ runs on ordinary transient tasks plus entries — no dossier machinery required)
 four kinds of thing — *dossiers* (tracked items), a *declared lifecycle*, *entries*, and
 *decisions*. Any word that comes from an owner's document — account, sequence, reply, insurer,
 candidate, contract — is playbook **content**, and belongs in fixtures, playbook stores, and attrs,
-never in schema enums, verb names, or field names. If a future change wants to add such a word to
+never in engine enums, verb names, or field names. If a future change wants to add such a word to
 the engine, the answer is an attr or an entry, not a column.
+
+## Identity and tenancy — the connector is the boundary
+
+Every tool call is **scoped server-side by the authenticated Jupi user** — the OAuth principal of
+the connector, the same `jupiUserId` that keys the brain's Supermemory container tag. No tool
+takes or accepts a user id from the caller; there is no connection string, no credential in any
+config or prompt, and no client-side query to scope. (This replaces the old honor-system client
+scoping over a shared Neon project — the auth boundary is the physical boundary now.) A skill that
+needs the id itself — the brain's container tag — reads it from `get-current-user-tool`, never
+from config.
 
 ## The one invariant everything rests on (§4)
 
@@ -30,26 +41,26 @@ the engine, the answer is an attr or an entry, not a column.
 extraction (`inferred`/`declared`) and finalized decisions (`validated`) — and the two must never be
 confusable at read time:
 
-- **`pb-get-rule <point_id> [scope_key]`** is the ONLY lookup an act path may consult. It returns
-  entries at `status='validated'` and nothing else — a `pb-get-rule` hit means "the owner authorized
-  this" by construction. Exact match on `(point_id, scope_key)`; the caller decides its own fallback
-  order (scoped first, then `'global'`) by calling twice.
+- **`pb-get-rule`** (`point_id`, optional `scope_key`) is the ONLY lookup an act path may consult.
+  It returns entries at `status='validated'` and nothing else — a `pb-get-rule` hit means "the
+  owner authorized this" by construction. Exact match on `(point_id, scope_key)`; the caller
+  decides its own fallback order (scoped first, then `'global'`) by calling twice.
 - **`pb-list-entries`** is the read for everything else: enumerating declared holes to raise,
   fetching `inferred`/`declared` entries to **pre-fill a decision's recommended option** (provenance
   cited). Nothing returned by `pb-list-entries` authorizes an act — a planner using it for that is
   violating the contract, whatever its confidence.
 
-The write side mirrors it: `pb-upsert-entry` with incoming `inferred`/`declared` creates or refreshes
-extraction-owned rows but is refused (`applied: false`) on a row whose status is
-`validated`/`suspended`. Those rows move only through the decision path — an upsert with incoming
-`status: 'validated'` (what `act-post-decision` performs when a rule-scale decision settles) — or an
-explicit `pb-set-status` (suspension, §6).
+The write side mirrors it, enforced by the server: `pb-upsert-entry` with incoming
+`inferred`/`declared` creates or refreshes extraction-owned rows but is refused (`applied: false`)
+on a row whose status is `validated`/`suspended`. Those rows move only through the decision path —
+an upsert with incoming `status: 'validated'` (what `act-post-decision` performs when a rule-scale
+decision settles) — or an explicit `pb-set-status` (suspension, §6).
 
 ## Entry semantics
 
-- **One row per `(user_id, point_id, scope_key)`** — unique index. A declared hole and its future
-  answer are the same row at different lifecycle states, never two rows.
-- **`answer IS NULL` = a declared hole** ("not established — I will ask every time", §2). A hole is a
+- **One row per `(user, point_id, scope_key)`** — server-enforced unicity. A declared hole and its
+  future answer are the same row at different lifecycle states, never two rows.
+- **`answer` absent = a declared hole** ("not established — I will ask every time", §2). A hole is a
   real entry: it carries the question and scope axis so the planner can raise the right decision.
 - **`answer_kind`** is the §5 terminal-state vocabulary: `rule` ("when X, always Y") · `always_ask`
   (validated case-by-case — it pre-empts *re-proposing codification*, not the decision itself) ·
@@ -61,10 +72,11 @@ explicit `pb-set-status` (suspension, §6).
   case-by-case, §6 — automatic downward is allowed; upward always requires the owner).
 - **`version`**: 0 = never validated; every transition TO `validated` bumps it (`pb-upsert-entry`
   with validated, or `pb-set-status … validated`) — a re-validation or amendment is vN+1 (§6). The
-  full "why" of each version is the decision trail in Jupi; Neon keeps the counter, not the story.
-- **`evidence_count` / `counter_evidence_count`** (`pb-add-evidence <id> evidence|counter`): the §3
+  full "why" of each version is the decision trail in Jupi; the store keeps the counter, not the
+  story.
+- **`evidence_count` / `counter_evidence_count`** (`pb-add-evidence`, `evidence|counter`): the §3
   ledger's tallies. Displayed confidence is *derived* from these — there is deliberately no stored
-  score. The suspension path (its own ticket) reads `counter_evidence_count`.
+  score. The suspension path reads `counter_evidence_count`.
 
 ## The declared lifecycle — stages are playbook content
 
@@ -75,10 +87,8 @@ explicit `pb-set-status` (suspension, §6).
   ordinary upsert, so an owner-validated lifecycle refuses re-declaration like any entry);
   `pb-get-stages` reads it.
 - `pb-set-stage` and `pb-create-dossier`'s `stage` field validate against the declared list — with
-  **no lifecycle declared, nothing can be staged** and new dossiers are created unstaged (NULL):
+  **no lifecycle declared, nothing can be staged** and new dossiers are created unstaged:
   the engine never invents a frame the playbook didn't declare.
-- There is no CHECK on `tasks.stage` in the schema, on purpose — the schema stays
-  lifecycle-agnostic; enforcement lives in the verbs against the declared list.
 
 ## Reserved entries — the point ids the engine reads by convention
 
@@ -96,17 +106,16 @@ Three point families are reserved; everything else in the store is the playbook'
 ## Dossier semantics (§8)
 
 - A dossier is **the playbook's tracked item** — for the pilot an account, elsewhere a candidate, a
-  contract, a ticket. Physically: a `tasks` row, `signal_type='dossier'`,
-  `signal_ref='dossier:<label-slug>'`, `status='open'`, plus the fork's `stage` column. The
+  contract, a ticket. Physically: a task row, `signal_type='dossier'`,
+  `signal_ref='dossier:<label-slug>'`, `status='open'`, plus a `stage`. The
   existing machinery applies unchanged: a decision gates it via `gating_decision_ids` +
   `status='blocked'`, and `act-post-decision` unblocks it — nothing dossier-specific to build there.
 - **`pb-create-dossier` takes `{label, attrs, notes}`** — `label` is the item's human name; `attrs`
   is a free key/value object in the *playbook's* vocabulary, rendered as `key: value` lines into
-  the summary. The engine does not know what the keys mean. (TECH-485 is deliberately "a column and
-  verbs, no new table"; if the planner needs an attr structurally for scope keys — `broker=X` — 
-  promoting it is that ticket's call.)
-- **Seed-idempotent**: keyed on the label slug, a re-run refreshes the descriptive summary but
-  never resets `stage` or `status` — lifecycle progress belongs to the lifecycle.
+  the summary. The engine does not know what the keys mean.
+- **Seed-idempotent** (server-enforced): keyed on the label slug, a re-run refreshes the
+  descriptive summary but never resets `stage` or `status` — lifecycle progress belongs to the
+  lifecycle.
 - `stage_detail` is stage-local free detail (a sequence's current step index); `pb-set-stage`
   replaces it on every transition so it can't lie across stages.
 - **Attaching inbound** (`pb-attach-signal`) is the inbound watch's single write: the signal's
@@ -117,9 +126,9 @@ Three point families are reserved; everything else in the store is the playbook'
   never changes; the watch stores **pointers, never bodies** — the planner re-reads the thread from
   the source at plan time.
 - **Priority is derived, never stored**: the planner ranks from stage. Dossier rows carry no score;
-  proactive's scoring model is not ported.
+  proactive's scoring model is not part of this engine.
 - **A playbook without tracked items is legitimate**: it runs on ordinary transient tasks plus
-  entries — the dossier verbs simply go unused. Nothing forces the case shape onto a process that
+  entries — the dossier tools simply go unused. Nothing forces the case shape onto a process that
   doesn't have one.
 
 ## The application ledger and the downward path (§6)
@@ -127,29 +136,27 @@ Three point families are reserved; everything else in the store is the playbook'
 - **Every rule application leaves a row** (`pb-log-application`, written by the planner the moment
   a rule-covered ACT is emitted). Displayed confidence is *derived* from this ledger — "applied N×
   without edits, M contradictions" — never a stored score.
-- **Outcomes are declarative in V1** (`pb-note-outcome <id> as_is|edited|abandoned [who] [severe]`):
-  `as_is` → `evidence_count`+1 · `edited` → `counter_evidence_count`+1 · `abandoned` → recorded, no
-  bump (a weak signal). The entry points and the Friday review collect them; nothing ever guesses
-  an outcome. The technical draft-vs-sent diff replaces the declarative path later.
-- **Suspension is automatic and mechanical** — the §6 asymmetry: going down only asks more
-  questions, so the *verb itself* demotes. A `validated` entry whose counter reaches
-  `config.suspendThreshold` (default 2), or any `severe` incident, flips to `suspended` inside
-  `pb-note-outcome` (version unchanged) and the gate stops returning it instantly. The verb returns
+- **Outcomes are declarative in V1** (`pb-note-outcome`: `as_is|edited|abandoned`, optional
+  `noted_by`/`severe`): `as_is` → `evidence_count`+1 · `edited` → `counter_evidence_count`+1 ·
+  `abandoned` → recorded, no bump (a weak signal). The entry points and the Friday review collect
+  them; nothing ever guesses an outcome.
+- **Suspension is automatic and mechanical, server-side** — the §6 asymmetry: going down only asks
+  more questions, so the *tool itself* demotes. A `validated` entry whose counter reaches the
+  suspend threshold (default 2), or any `severe` incident, flips to `suspended` inside
+  `pb-note-outcome` (version unchanged) and the gate stops returning it instantly. The tool returns
   `suspended: true`; **the caller raises the rule-scale amendment decision** (re-validate / amend /
   retire — template 5) anchored on the triggering case: mechanical demotion, agentic escalation.
 - **Re-validation is the ordinary upward path** — the owner's amendment decision lands as
   `validated` vN+1 (via `pb-upsert-entry` at validated or `pb-set-status`), and the gate returns
   the entry again. Upward always requires the owner; nothing automatic ever re-validates.
 
-## Plumbing (same rules as db.mjs)
+## Serving — how skills reach the tools
 
-- **Tenancy**: every verb is scoped by `user_id` automatically — the config's `jupiUserId` (env
-  `$JUPI_USER_ID` first). Isolation is enforced in the queries, not by the DB grant; a synthetic
-  tenant is what isolates a bench or eval run.
-- **Config walk**: `.playbook-jupi/config.local.json` preferred, `.proactive-jupi/config.local.json`
-  accepted as fallback — one file can serve both this helper and the parity-locked db.mjs (which the
-  copied-verbatim skills still read) during the pilot. Env (`$NEON_CONN_STRING`/`$DATABASE_URL`,
-  `$JUPI_USER_ID`) wins over both.
-- **Bound parameters everywhere** — playbook text and inbound content are untrusted data, never
-  string-interpolated into SQL. Transient-fault retry mirrors db.mjs.
-- Deps: `bash "${CLAUDE_PLUGIN_ROOT}/shared/ensure-deps.sh"` — the same one dependency path.
+- The tools live on the **installed Jupi connector** (the same server as the decision tools —
+  `create-decision-tool`, `get-decision`, `search-decisions-tool`). Load them via **ToolSearch by
+  logical name** (`pb-get-rule`, `pb-list-dossiers`, …); the runtime resolves the server, which may
+  appear namespaced. No process to run, no dependency to install, nothing to apply to a database.
+- Untrusted content (playbook text, inbound signals) is data in tool arguments — the server binds
+  it; nothing is ever interpolated into a query on either side.
+- Eval/bench isolation is a backend concern (deferred — the `is_eval` flag on cursors survives;
+  the tenant story under OAuth identity lands with the backend's staging/test accounts).

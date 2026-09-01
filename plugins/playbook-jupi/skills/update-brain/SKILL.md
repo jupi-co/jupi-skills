@@ -1,9 +1,8 @@
 ---
-# synced from proactive-jupi@df18ff5 — verbatim copy (fork policy, design §1): edit the plugins/proactive-jupi original, then re-copy; do not edit here
 name: update-brain
 description: >-
-  Proactive-Jupi's brain crawler and single writer of Facts into the brain (a per-user
-  Supermemory store) — what Proactive-Jupi knows about people, orgs, projects, processes,
+  Playbook-Jupi's brain crawler and single writer of Facts into the brain (a per-user
+  Supermemory store) — what Playbook-Jupi knows about people, orgs, projects, processes,
   tools and goals, read from the user's connected tools (Gmail, Calendar, Linear…). Use
   whenever the goal is to build, refresh, extend, or correct that knowledge: "update the
   brain", "refresh the context", "crawl my world", "the brain feels stale", or an entity
@@ -11,21 +10,27 @@ description: >-
   up to speed on an account before a meeting". Also runs from the daily routine; act-or-decide
   calls it for context on an entity. Two modes: full (windowed tool sweep) and targeted
   (one-entity lookup → short summary). Read-only — it never acts, drafts, or decides. Not for:
-  initial workspace setup (setup-proactive-jupi), doing a task or drafting a reply
+  initial workspace setup (setup-playbook-jupi), doing a task or drafting a reply
   (act-or-decide), or looking up past decisions (search-decisions).
 disable-model-invocation: false
 ---
 
-# update-brain — Proactive-Jupi's brain crawler
+# update-brain — Playbook-Jupi's brain crawler
 
-You build and maintain **the brain**: what Proactive-Jupi knows about the user and their environment. You read the connected tools (read-only) and write **Facts** to **Supermemory**. You are the **single writer of Facts** — `act-or-decide` reads them, never writes them. You never post to Jupi and never execute anything.
+You build and maintain **the brain**: what Playbook-Jupi knows about the user and their environment. You read the connected tools (read-only) and write **Facts** to **Supermemory**. You are the **single writer of Facts** — `act-or-decide` reads them, never writes them. You never post to Jupi and never execute anything.
 
 **Read `references/supermemory.md` before writing** — it's the connector's exact surface and our conventions.
 
 ## Store: Supermemory via the connector (connector-simple)
+- **No connector → say so plainly and stop; never fail loudly.** If the memory tools don't
+  resolve, this workspace has no brain — a supported configuration, not a broken one. Return one
+  short paragraph: what you would have looked up, that the playbook itself runs unaffected
+  (rules, dossiers and decisions never depended on you), and how to add it — an MCP connector to
+  `https://mcp.supermemory.ai/mcp` with `Authorization: Bearer sm_<key>` from app.supermemory.ai,
+  or just re-run `setup-playbook-jupi`, which walks it. Then stop: no half-run, no retry loop.
 - **Write** with the `memory` tool (`save`); **read** with `recall`. Both take a `containerTag`.
-- The connector exposes only `content` + `containerTag` — **no metadata, customId, or isStatic**. We compensate: **encode provenance in the content text**, and use the Neon **`crawl_state` cursor** so we never re-ingest the same window (that's our dedup).
-- **Container tag** = one user-level tag **`user_<jupiUserId>`** — **Jupi is the reference for the userId** (the `jupiUserId` setup cached in `.proactive-jupi/config.local.json`, the same tenant key Neon rows carry). Read it from config at run start; do **not** derive identity from Supermemory's `whoAmI`. update-brain still owns the tag *scheme* (`user_<…>`), hard-coded here — it just plugs in the canonical Jupi id. (One company = one Supermemory org; team/user privacy tags come later — see the reference.)
+- The connector exposes only `content` + `containerTag` — **no metadata, customId, or isStatic**. We compensate: **encode provenance in the content text**, and use the playbook store's **`crawl_state` cursor** (the `pb-get-cursor`/`pb-advance-cursor` tools) so we never re-ingest the same window (that's our dedup).
+- **Container tag** = one user-level tag **`user_<jupiUserId>`** — **Jupi is the reference for the userId**: read it from **`get-current-user-tool`** (the Jupi connector's whoami — the same principal that scopes every `pb-*` call) at run start; do **not** derive identity from Supermemory's `whoAmI`, and never from a config file. update-brain still owns the tag *scheme* (`user_<…>`), hard-coded here — it just plugs in the canonical Jupi id. (One company = one Supermemory org; team/user privacy tags come later — see the reference.)
 - **Verify a `save` by reading it back, not by trusting its confirmation.** The confirmation is the unreliable part: a `save` can confirm the wrong container tag, return nothing while having landed, or come back with a `recall` payload entirely. So after a batch, `recall` on your tag and check the Fact is present under it; re-save only if it is **genuinely absent**. Re-saving on a mismatched or missing confirmation manufactures a duplicate you cannot remove (`forget` is unreliable, no delete-by-id). Don't run a second Facts-writer concurrently. See `references/supermemory.md` for the full behaviour.
 
 ## What a Fact looks like
@@ -46,7 +51,7 @@ Rules: **provenance always**; mark `confirmed` vs `inferred` and **never state a
 >
 > **In-clause hedging helps, but it is a mitigation, not a fix — don't treat it as a guarantee.** Four independent runs (2026-07-29) wrote the hedge inside the clause exactly as prescribed and still lost it at the top rank: *"update-brain's inferred read is that he is the main sourcer of inbound intros"* came back as the flat **"Nick Hernandez is the main sourcer of inbound intros at Jupi"**, and an explicitly-marked inference came back rendered as *"…**confirm** that Beamy is a live account"* — the aggregation layer upgraded a hedge into a confirmation. Temporal qualifiers fare worst: they are dropped essentially always. One run also saw a re-saved correction rank **below** the flattened original (0.81 vs 0.80), so "recency wins" is not dependable either.
 >
-> **So: never let safety rest on a qualifier surviving.** If a Fact is only safe *because* it is hedged or dated, it does not belong in the brain in that form — state the narrower claim you can defend unqualified, or put the qualifier in Neon where it comes back as written (§Voice profiles is the worked example). **Test it, don't assume:** after a batch, `recall` one hedged Fact and read what returns. If the hedge is gone, that is the store behaving as measured — report it, and reach for the structural fix rather than rewording the sentence again.
+> **So: never let safety rest on a qualifier surviving.** If a Fact is only safe *because* it is hedged or dated, it does not belong in the brain in that form — state the narrower claim you can defend unqualified, or put the qualifier in the playbook store where it comes back as written (§Voice profiles is the worked example). **Test it, don't assume:** after a batch, `recall` one hedged Fact and read what returns. If the hedge is gone, that is the store behaving as measured — report it, and reach for the structural fix rather than rewording the sentence again.
 
 ## Fact integrity — check what came back, not just that something did
 
@@ -113,9 +118,9 @@ sentence, that is the signal the freshness question belongs to `act-or-decide`'s
 Fact.
 
 ## Incremental crawling — the `crawl_state` cursor
-Neon `crawl_state` holds a row per `(user_id, consumer, source, is_eval)`; yours is **`consumer='brain'`**, scoped to your tenant. Dedup **and** credit control: only ever read content **newer** than the cursor, then advance it — never re-read a window twice. The `consumer` column keeps your cursors independent of `refresh-backlog`'s (`consumer='backlog'`) on the same source; `is_eval=true` isolates eval runs.
-- Access via the shared helper: `node "${CLAUDE_PLUGIN_ROOT}/shared/db.mjs" get-cursor brain <source> [eval]` and `advance-cursor brain <source> <cursor> [eval]`. It reads the project-scoped `neonConnString` **and** `jupiUserId` from config and **scopes every query by `user_id` automatically** (the same id behind your container tag `user_<jupiUserId>`) — so you never hand-write SQL, never pass the user id, and never touch the account-wide Neon MCP. Without that scoping a shared DB would cross users' cursors; the helper guarantees it. *(Deps: run `bash "${CLAUDE_PLUGIN_ROOT}/shared/ensure-deps.sh"` once at the top of the run — **the** dependency path every `db.mjs` caller shares, idempotent and silent when they already resolve. Never symlink another directory's `node_modules` into `shared/`; it lasts exactly as long as the session.)*
-- **Config not found at boot.** Stop and report — don't hunt for it elsewhere (searching a connected Drive or inbox for a secret-bearing file is unbounded, and is the chat-visible flow the connection string must never travel through). A scheduled routine **carries** its config and writes it to `./.proactive-jupi/config.local.json` before invoking you, so config missing under a routine means that boot step didn't happen — the routine needs re-creating by setup, not a retry. Say which case you're in.
+The store's `crawl_state` holds a row per `(user, consumer, source, is_eval)`; yours is **`consumer='brain'`**, scoped to your tenant. Dedup **and** credit control: only ever read content **newer** than the cursor, then advance it — never re-read a window twice. The `consumer` column keeps your cursors independent of `refresh-backlog`'s (`consumer='backlog'`) on the same source; `is_eval=true` isolates eval runs.
+- Access via the **`pb-get-cursor`** / **`pb-advance-cursor`** tools (`consumer: brain`, the source; `eval` flag for bench runs) — MCP tools on the installed Jupi connector, loaded via ToolSearch. Every call is **scoped server-side by the connector's authenticated user** (the same id behind your container tag `user_<jupiUserId>`) — you never pass a user id, and a shared store can never cross users' cursors (`shared/playbook-contract.md`).
+- **Config not found at boot** (the non-secret tunables — `crawlWindowDays`, sources): under a scheduled routine the routine writes `.playbook-jupi/config.local.json` before invoking you, so config missing there means that boot step didn't happen — the routine needs re-creating by setup, not a retry. Say which case you're in.
 
 ## You are a crawler, and a crawler has two halves
 The `crawl_state` cursor is your **visited set** — "don't read this window again". On its own it makes you a
@@ -132,10 +137,10 @@ Frontier rows are **requests to look, never Facts** — which is precisely what 
 crawling without becoming writers of the brain. You still read the tools and author every Fact.
 
 ```
-node "${CLAUDE_PLUGIN_ROOT}/shared/db.mjs" list-frontier [N]        → pending items, oldest first
-node "${CLAUDE_PLUGIN_ROOT}/shared/db.mjs" push-frontier '<json>'   → {kind, entity, note, source_ref, pushed_by}
-node "${CLAUDE_PLUGIN_ROOT}/shared/db.mjs" close-frontier <id> done|dropped
-node "${CLAUDE_PLUGIN_ROOT}/shared/db.mjs" frontier-stats [days]   → pending / pushed vs drained / verdict
+pb-list-frontier [N]          → pending items, oldest first
+pb-push-frontier {…}          → {kind, entity, note, source_ref, pushed_by}
+pb-close-frontier <id> done|dropped
+pb-frontier-stats [days]      → pending / pushed vs drained / verdict
 ```
 `kind` routes it: **`entity`** (who/what is this?) · **`voice`** (how does the user write to X in channel Y? —
 §Voice profiles) · **`topic`** (a subject area worth a sweep).
@@ -173,22 +178,21 @@ and pay for it again.
 
 ### `full` (default) — windowed sweep to build/refresh the brain
 Narrate each step (✅ done / 🔧 fixed / ⚠️ needs you); announce your budget.
-1. Read `jupiUserId` from config → container tag `user_<jupiUserId>`. Read your cursors via `db.mjs get-cursor brain <source>` (user-scoped automatically).
-2. **Pick a budget and say it** — a realistic number of items/sources this run. A few well-done beats skimming everything (agent length + credits are the real limits — this is why we crawl incrementally rather than all-at-once). **Read `frontier-stats` first and split the budget from its `verdict`** (§the two halves): `keeping up` → ~a third to the frontier; `growing` → half or more; `full` → all of it. Say the split *and the verdict you sized it from*, so a queue outrunning its drain rate is visible in the report rather than inferred three runs later.
-3. **Drain the frontier first** — `list-frontier [N]`, oldest first, up to your frontier budget. These are gaps a *planner* hit while trying to do the user's work, so they are the highest-value thing you can spend a lookup on: the window is a guess about what matters, the frontier is evidence. Research each per its `kind` (`entity` → who/what is this · `voice` → §Voice profiles · `topic` → a filtered sweep), `save` the Facts, then `close-frontier <id> done|dropped`. Read each item's `note` before you start — it carries *why* it was queued, which is usually the difference between a useful lookup and a generic profile. If the frontier is empty, say so in one line and give the whole budget to the window.
-4. For each `Connected` tool tagged **`context`** in `.proactive-jupi/assets.md` (that role means "read it to feed the brain"): read content **newer than its cursor** within `crawlWindowDays`, using **filters, not bulk reads**. Synthesize Facts → `save` to the container tag. **Push what you trip over** (`push-frontier`) rather than chasing it now.
-   - **An empty `context` set means a stale map, not an empty world — never report a clean run having read nothing.** An `assets.md` written before the roles refactor has no `Roles` column at all, so no tool carries `context` even though every one of them is connected and healthy. In that case fall back to the `Connected` tools whose surface is plainly readable context (mail, calendar, docs, issues), **say in the summary that you inferred the sources from a pre-roles `assets.md`**, and recommend re-running `setup-proactive-jupi` to reconcile it. A `Roles` column that exists but tags nothing `context` is a real configuration answer — report it and crawl nothing.
-5. **Advance each cursor** — `db.mjs advance-cursor brain <source> <cursor>` (user-scoped automatically).
+1. Read the user id from `get-current-user-tool` → container tag `user_<jupiUserId>`. Read your cursors via `pb-get-cursor` (`consumer: brain`, per source).
+2. **Pick a budget and say it** — a realistic number of items/sources this run. A few well-done beats skimming everything (agent length + credits are the real limits — this is why we crawl incrementally rather than all-at-once). **Read `pb-frontier-stats` first and split the budget from its `verdict`** (§the two halves): `keeping up` → ~a third to the frontier; `growing` → half or more; `full` → all of it. Say the split *and the verdict you sized it from*, so a queue outrunning its drain rate is visible in the report rather than inferred three runs later.
+3. **Drain the frontier first** — `pb-list-frontier`, oldest first, up to your frontier budget. These are gaps a *planner* hit while trying to do the user's work, so they are the highest-value thing you can spend a lookup on: the window is a guess about what matters, the frontier is evidence. Research each per its `kind` (`entity` → who/what is this · `voice` → §Voice profiles · `topic` → a filtered sweep), `save` the Facts, then `pb-close-frontier` (`done|dropped`). Read each item's `note` before you start — it carries *why* it was queued, which is usually the difference between a useful lookup and a generic profile. If the frontier is empty, say so in one line and give the whole budget to the window.
+4. For each connected tool whose surface is plainly readable context — mail, calendar, docs, issues (the sources the playbook's config names, plus what is obviously present): read content **newer than its cursor** within `crawlWindowDays`, using **filters, not bulk reads**. Synthesize Facts → `save` to the container tag. **Push what you trip over** (`pb-push-frontier`) rather than chasing it now. Nothing readable connected → report exactly that, never a clean run having read nothing.
+5. **Advance each cursor** — `pb-advance-cursor` (`consumer: brain`, the source, the marker).
 6. **Refresh core facts**: `recall` the durable ones (user identity, key orgs/relationships); if a fact has changed, **`save` the corrected statement** — Supermemory reconciles same-entity memories and favors recency. Do **not** rely on `forget` to remove the stale one: on the connector it is best-effort (semantic match ≥0.85 against Supermemory's *rewritten* stored form) and routinely misses paraphrased facts; there is no delete-by-id. **Reliable correction/deletion needs the HTTP API** (upgrade trigger) — until then, phrase updates as new authoritative statements and let recency win.
 7. **Screen a sample of what you wrote** (§Fact integrity) — `recall` a handful, check for degenerate text and lost qualification, re-save corrections.
 8. Return a short summary: budget drained (**frontier vs window, and the `frontier-stats` verdict you sized it from**), facts written, **facts screened + any degenerate ones found**, cursors advanced, **frontier closed vs pushed vs still pending — plus any push that was refused at the cap** (that refusal is the clearest evidence the brain isn't crawled often enough; never drop it silently), any unreachable tool, zones still uncovered.
 
 ### `targeted "<request>"` — focused lookup for act-or-decide
-1. Read `jupiUserId` from config → tag `user_<jupiUserId>`. `recall` what we already know about the entity — don't re-fetch what's known.
+1. Read the user id from `get-current-user-tool` → tag `user_<jupiUserId>`. `recall` what we already know about the entity — don't re-fetch what's known.
 2. Pull specific **new** content from the relevant tool(s) (filtered search on the entity).
 3. Synthesize + `save` new/updated Facts.
 4. **Return a short synthesized summary (4–6 lines)** to the caller — that's the value; don't just say "done".
-5. **Push what you tripped over** (`push-frontier`, `pushed_by: "update-brain"`) — a targeted lookup almost always turns up an adjacent unknown, and it's the cheapest moment to notice it. Don't chase it: the caller is waiting on an answer to *their* question.
+5. **Push what you tripped over** (`pb-push-frontier`, `pushed_by: "update-brain"`) — a targeted lookup almost always turns up an adjacent unknown, and it's the cheapest moment to notice it. Don't chase it: the caller is waiting on an answer to *their* question.
 
 **Two shapes of request arrive here.**
 - **A lookup** — *"who is X / what is this org / what's the state of this project?"* — the flow above.

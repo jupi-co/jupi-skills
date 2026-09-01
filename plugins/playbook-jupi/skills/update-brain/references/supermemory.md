@@ -9,7 +9,7 @@
 
 ## Container-tag scheme
 - **One company = one Supermemory org** (the connected account).
-- **v1:** a single **user-level tag** = `user_<jupiUserId>`. **Jupi is the reference for the userId** — the `jupiUserId` setup cached in `.proactive-jupi/config.local.json`, the same tenant key Neon rows carry, so the brain and the backlog share one identity. The tag *scheme* (`user_<…>`) is hard-coded here (update-brain's concern); the id is read from config, never asked, never derived from Supermemory's `whoAmI`.
+- **v1:** a single **user-level tag** = `user_<jupiUserId>`. **Jupi is the reference for the userId** — read from `get-current-user-tool` (the Jupi connector's whoami), the same principal that scopes every `pb-*` call server-side, so the brain and the playbook store share one identity. The tag *scheme* (`user_<…>`) is hard-coded here (update-brain's concern); the id is never asked, never read from a config file, never derived from Supermemory's `whoAmI`.
 - **Later (privacy — Nick's public-vs-private split):** hierarchical `org_<id>` / `org_<id>_team_<id>` / `org_<id>_team_<id>_user_<id>`. Shared facts get the higher-level tag, private facts the user tag; Supermemory isolates by tag (a user can't read another's).
 
 ## What the connector does NOT give us — and how we compensate

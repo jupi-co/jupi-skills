@@ -14,15 +14,23 @@ proactive-jupi sets at the repo root; `run-eval.sh` takes the nested form as the
 > with its synthetic-tenant guard). Run per `evals/README.md`: layout → executor subagents
 > (with_skill + baseline) → grade → benchmark → view; **dry-run cases first, never perform mode.**
 
-The **copied-verbatim** skills (`execute-action`, `act-post-decision`, `update-brain`) get no sets
-here: they are byte-synced copies of the proactive-jupi originals (see the `synced from
-proactive-jupi@…` marker in each), so the existing root-level sets cover them.
+> **⚠️ Status since the MCP migration (TECH-547): deferred, pending the backend.** The plugin's
+> skills now reach their store through the `pb-*` MCP tools on the Jupi connector (JUPI-604) —
+> there is no Neon layer, no conn string, and no client-supplied `jupiUserId` left to build a
+> synthetic tenant from. These sets (prompts, isolation preamble, `purge-scratch.mjs`) still
+> describe the Neon-era harness and will not run as written; they are kept as the behavioral
+> spec. Re-pointing them — test Jupi accounts + a staging backend, `is_eval` kept on cursors —
+> is deliberately deferred until the backend's eval/staging story lands.
 
-**Isolation + teardown rules are shared — read [`evals/README.md`](../README.md) first.** Everything
-there applies unchanged (same Neon `eval:` prefix + synthetic `jupiUserId`, same Supermemory scratch
-container, same Jupi test workspace, same no-tool-writes rule). One addition once cases exist: fixture
-dossiers and playbook stores must be fictional — never a real account, contact, or customer document.
-Per-set purge scripts arrive with the cases.
+`execute-action`, `act-post-decision` and `update-brain` are now **playbook-native** (the
+proactive-jupi parity was broken by the MCP migration); they still have no sets here — cases for
+them arrive with the re-pointing above.
+
+**Isolation + teardown rules are shared — read [`evals/README.md`](../README.md) first.** The
+spirit applies unchanged (synthetic tenants, same Supermemory scratch container, same Jupi test
+workspace, same no-tool-writes rule); the mechanics move server-side with the migration. Fixture
+dossiers and playbook stores must be fictional — never a real account, contact, or customer
+document.
 
 ## The sets
 

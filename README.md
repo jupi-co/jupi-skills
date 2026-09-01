@@ -222,7 +222,7 @@ Skip the first line if the marketplace is already registered (then `/plugin mark
 
 ### Configure
 
-Instance state and secrets live under `.playbook-jupi/` at the workspace root (gitignored — never commit it):
+Instance settings live under `.playbook-jupi/` at the workspace root (gitignored). **No secret goes in it** — the engine's store is reached through the Jupi connector, authenticated by the connector itself:
 
 ```bash
 cp dev/config.template.json .playbook-jupi/config.local.json
@@ -255,11 +255,12 @@ plugins/proactive-jupi/
   skills/                              refresh-backlog, update-brain, act-or-decide,
                                        act-post-decision, execute-action, setup-proactive-jupi
 plugins/playbook-jupi/                 closed-world fork of proactive-jupi (see the Playbook-Jupi
-                                       section; live-skill status: dev/DEV-ENV.md). shared/ db.mjs +
-                                       ensure-deps.sh stay byte-identical with proactive-jupi —
-                                       CI-enforced; execute-action, act-post-decision, update-brain
-                                       are synced copies (marker in each SKILL.md); playbook.mjs +
-                                       playbook-contract.md carry everything the fork adds
+                                       section; bench status: dev/DEV-ENV.md). Carries no data
+                                       layer of its own — it reads and writes through the pb-* MCP
+                                       tools on the Jupi connector, so shared/ holds only
+                                       playbook-contract.md (what those tools guarantee) +
+                                       signal-sources.md. Independent of proactive-jupi since that
+                                       move: no synced copies, no byte-parity
 dev/                                   the playbook-jupi dev bench: DEV-ENV.md (runbook + status),
                                        seed/reset, config template, mirror/ fixture world
 tools/                                 validate-plugin.sh, package-plugin.sh, install-hooks.sh, …

@@ -26,14 +26,15 @@ close it ✅ done / 🔧 fixed / ⚠️ needs you. Front-load everything human-g
 after the ✋ boundary nothing may prompt. If nobody answers a prelude question, ask once, save what
 is settled, and halt — a re-run resumes.
 
-> **Workspace-relative.** `.playbook-jupi/config.local.json` resolves against the CWD walking up
-> (`.proactive-jupi/` accepted as fallback). Shared helpers live under
-> **`${CLAUDE_PLUGIN_ROOT}/shared/`**; every `playbook.mjs`/`db.mjs` call is tenant-scoped
-> automatically from config.
+> **The store is the Jupi connector.** Every `pb-*` verb below is an MCP tool on the installed
+> Jupi connector — load them via ToolSearch by logical name; every call is tenant-scoped
+> server-side from the connector's auth (`shared/playbook-contract.md`) — no schema to apply, no
+> dependency to install, no credential anywhere. Config (`.playbook-jupi/config.local.json`,
+> resolving against the CWD walking up) carries only non-secret keys.
 
 ## Contract (hard — never transgress)
-- ✅ **Write only through the verbs** (`playbook.mjs` — entries, lifecycle, dossiers) **plus the one
-  projection file** at `projectionTarget`. Never hand-written SQL, never any other file.
+- ✅ **Write only through the `pb-*` tools** (entries, lifecycle, dossiers) **plus the one
+  projection file** at `projectionTarget`. Never any other data path, never any other file.
 - ❌ **Nothing you extract is ever `validated`.** Extraction writes `declared`, `inferred`, or a
   hole — authority comes from the owner's finalized decisions, never from reading their documents
   (§4). If you catch yourself writing `status: "validated"`, stop: that is the invariant this
@@ -47,24 +48,49 @@ is settled, and halt — a re-run resumes.
 ## Prelude (attended) — then the ✋ boundary
 
 1. **Config** (`.playbook-jupi/config.local.json`, template `dev/config.template.json` in the
-   bench repo): `jupiWorkspace` · `jupiUserId` · `neonConnString` · **`dossierSource`** (where the
+   bench repo — no secret in any key): `jupiWorkspace` · **`dossierSource`** (where the
    tracked items are listed) · **`playbookSources`** (the owner documents to extract from — an
    array of paths/refs) · `projectionTarget` (where the human-readable playbook lands) ·
    `inboundStage` (optional). Missing keys: ask now, in the prelude — never after the boundary.
-2. **Jupi is the blocking gate.** Probe `search-decisions-tool` (1 result, `groupSlug:
-   jupiWorkspace`). `{"items":[]}` is a success; `Group not found` blocks — give the fix and
-   re-probe (bounded by the no-answer rule). Nothing else blocks setup.
-3. **Deps + schema:** `bash "${CLAUDE_PLUGIN_ROOT}/shared/ensure-deps.sh"`, then
-   `node "${CLAUDE_PLUGIN_ROOT}/shared/apply-schema.mjs"` — idempotent; report `{applied, failed}`
-   and surface `errors[]` verbatim if `failed > 0`.
-4. **Sources present:** every `playbookSources` doc and the `dossierSource` resolve and are
+2. **Jupi is the blocking gate — and the store now lives behind it.** Probe
+   `search-decisions-tool` (1 result, `groupSlug: jupiWorkspace`) — `{"items":[]}` is a success;
+   `Group not found` blocks — **and probe one `pb-*` tool** (`pb-get-stages`; `null` is a success,
+   it just means no lifecycle yet). A connector that doesn't serve the playbook tools blocks —
+   give the fix and re-probe (bounded by the no-answer rule). Nothing else blocks setup.
+3. **Sources present:** every `playbookSources` doc and the `dossierSource` resolve and are
    readable. A missing source is a prelude stop, not a mid-run surprise.
-5. **The playbook's name** — propose one extracted from the `playbookSources` (the main document's
+4. **The playbook's name** — propose one extracted from the `playbookSources` (the main document's
    title, or how the owner refers to the process) and have the owner confirm or correct it here;
    on a re-run where a `playbook-name` entry already exists, show the current name and confirm.
    Asked in the prelude, written at extraction (the reserved entry — §contract). This is the name
    decisions and reports will use (*"as part of the playbook « <name> »"*), so it must be the
    owner's word for it, not ours.
+5. **The brain (Supermemory) — optional, and the point is to bring an existing one.** The value is
+   **connecting the memory the user already has**, so Jupi arrives knowing their company's world
+   rather than learning it from zero; creating a store is the fallback, not the pitch. Probe the
+   connector with a cheap `recall` on the container tag:
+   - **Connected, and it knows things** → the good case: say what carried over, in one line
+     (*"your memory is connected — Jupi already knows your people and accounts"*), and move on.
+     Never raise API keys when a connector is present.
+   - **Connected but empty under this workspace's tag** → say so plainly, because it is rarely
+     what the user expects: the brain reads and writes under `user_<their Jupi id>`, so memories
+     another tool wrote under a different container tag are **not visible here** (a brain built
+     under the same Jupi identity carries over on its own; a company-wide container does not,
+     today). Offer the first pass below to start one from their connected tools.
+   - **No connector → onboard, don't error** — three things, in the user's language: **what it
+     buys them** — Jupi brings the company context it already has into the process: it knows who
+     the people and orgs in these dossiers are, so **the decisions it puts to them are better
+     framed** (who this contact is, whether that company is already a customer) instead of asking
+     from zero · **that the playbook runs fine without it** (nothing blocked, no rule or decision
+     depends on it — it just has less context to frame with) · **the steps**: if their company
+     already has a
+     Supermemory, connect it as an **MCP connector** (custom MCP server, URL
+     `https://mcp.supermemory.ai/mcp`, header `Authorization: Bearer sm_<key>`); if not, an
+     account at app.supermemory.ai issues the key first. Then they tell you, and you re-probe.
+
+   **"Not now" or no answer is a complete answer**: note it, continue, and say it once in the
+   closing report (*"running without a brain — re-run setup any time to add it"*). Never block,
+   never re-ask later in the run.
 
 > **✋ needs-you done — the rest runs unattended.**
 
@@ -122,6 +148,17 @@ the same interface with another reader once its connector is present). For each 
   contact-identified stage) — judge per row and say so in the report.
 - Idempotent: re-running refreshes summaries, never resets stage or status.
 
+## The brain's first pass — only when it knows nothing yet
+
+**A brain that arrived with content needs no seeding** — bringing an existing one is the whole
+point, and re-crawling would spend credits re-learning what it already holds. Only when the
+prelude's probe found the store **empty for this tag** (and the user agreed) invoke
+**`update-brain`** once in `full` mode with a **small, stated budget** — enough that the first
+planner run has context, not a history crawl. It verifies its own writes; carry its ⚠️ into your
+report rather than reporting a blind success. **Already populated, or no brain at all → skip it
+and say which, in one line.** *(From there it fills two ways: the planner's targeted lookups when
+it meets an entity it doesn't know, and the daily routine's Friday refresh.)*
+
 ## The projection — a rendering, never the truth (§7, §15.2)
 
 Rebuild `projectionTarget` **whole, from the rows** (`pb-get-stages` · `pb-list-entries` ·
@@ -165,7 +202,7 @@ version of what you do here:
 > **✋ One thing only the user can do: approval mode.** The create API exposes no approval
 > parameter, so both routines land on **manual approval** — say plainly, as the last line:
 > *"Both routines exist. Open each one and set approval to automatic — until then they wait
-> for you instead of running."* On a re-run, `db.mjs run-last <name>` tells you whether
+> for you instead of running."* On a re-run, `pb-run-last` (per routine name) tells you whether
 > anything has actually fired since creation — report which of the three states you see
 > (never ran / died mid-run / degraded).
 
@@ -173,12 +210,13 @@ version of what you do here:
 
 Per-step ✅/🔧/⚠️ throughout, then: the playbook's name · stages declared · decision points and entries by status ·
 **the holes, by name** (they are the co-construction backlog) · vigilance entries seeded ·
-dossiers by stage · what was owner-protected · any source unreadable and what it cost. Close with
+dossiers by stage · what was owner-protected · **the brain: connected (and seeded) or not, in one
+line either way** · any source unreadable and what it cost. Close with
 where the projection lives and the one line that frames the pilot: *the playbook will fill up as
 decisions land.*
 
 ## Where you write
-- **Neon** via `playbook.mjs` verbs (lifecycle entry, playbook entries, dossier rows).
+- **The playbook store** via the `pb-*` tools (lifecycle entry, playbook entries, dossier rows).
 - **The projection file** at `projectionTarget` — the only file this skill writes.
-- **Never**: validated statuses, hand-written SQL, the user's tools, Facts, Jupi decisions, or any
+- **Never**: validated statuses, any other data path, the user's tools, Facts, Jupi decisions, or any
   other file. **The two scheduled routines** (via the scheduler, reconciled by name — never a hidden cron).
