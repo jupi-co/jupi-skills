@@ -95,6 +95,10 @@ if something is missing, close the run record saying so and stop.
    (pb-list-applications, outcome unknown), listed so the owner can answer in one
    message ("the <point> draft on <dossier>: as-is, edited, or dropped?"). You are
    unattended — LIST them, never guess an outcome.
+   Also on Fridays, IF a memory connector is present: run update-brain once, full mode,
+   bounded budget — the weekly refresh that keeps what Jupi knows about the people and
+   companies in these dossiers from going stale. No connector → skip it silently; the
+   playbook does not depend on it.
 6. Close the run record honestly, as above.
 7. End with the user's version of the report — ONE stitched narrative (rules:
    act-or-decide's reference/REPORTING.md, §the user's version: assistant voice, the

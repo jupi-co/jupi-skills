@@ -108,8 +108,11 @@ Per decision point touched:
    is handled: case by case). A validated `delegated` hit acts like a rule; say in the trace that the
    discretion, not the answer, was granted.
 2. **No validated answer → dig before ask** (§8 walkthrough). One bounded research pass per point:
-   the attached thread, `search-decisions-tool` for prior settlements of this same point,
-   `recall` on the entities involved. If research **settles** it, that becomes the pre-filled
+   the attached thread, `search-decisions-tool` for prior settlements of this same point, and
+   `recall` on the entities involved **when a memory connector is present** — **no brain is a
+   supported configuration, not a failure**: skip that move, dig with the other two, and say once
+   in the report that you're running without one (it costs context, never authority — the gate is
+   unaffected). If research **settles** it, that becomes the pre-filled
    recommendation — write it back as an `inferred` entry (provenance: what you found) so the next
    run starts ahead; *(in dry-run: reason from reads only, write nothing, and say what you'd have
    recorded)*. If research doesn't settle it → **DECIDE**.

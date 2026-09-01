@@ -65,6 +65,26 @@ is settled, and halt — a re-run resumes.
    Asked in the prelude, written at extraction (the reserved entry — §contract). This is the name
    decisions and reports will use (*"as part of the playbook « <name> »"*), so it must be the
    owner's word for it, not ours.
+5. **The brain (Supermemory) — optional, and offered here or never.** Probe the memory connector
+   with a cheap `recall`. **Present → one line and move on** (*"memory connector detected — Jupi
+   will remember what it learns about your world"*); never raise API keys when a connector is
+   already there. **Absent → onboard, don't error** — say three things, in the user's language:
+   - **What it buys them, concretely**: Jupi remembers the people, companies and projects it meets
+     across runs instead of re-learning them every time · it picks up how they write to each
+     contact, so drafts land in their own register without re-reading their sent mail on every
+     run · decisions arrive carrying context on who the counterparty is.
+   - **That the playbook runs fine without it** — nothing here is blocked: the process, the rules,
+     the dossiers and the decisions all work. It simply asks more questions and pays more per
+     draft.
+   - **The steps, if they want it**: create an account at app.supermemory.ai → copy the API key
+     (`sm_…`) → add it as an **MCP connector** (custom MCP server, URL
+     `https://mcp.supermemory.ai/mcp`, header `Authorization: Bearer sm_<key>`) → tell you when
+     it's done and you re-probe. Mention that connecting now buys one bounded first pass over the
+     connected tools at the end of setup, so it isn't empty on day one.
+
+   **"Not now" or no answer is a complete answer**: note it, continue, and say it once in the
+   closing report (*"running without a brain — re-run setup any time to add it"*). Never block,
+   never re-ask later in the run.
 
 > **✋ needs-you done — the rest runs unattended.**
 
@@ -122,6 +142,15 @@ the same interface with another reader once its connector is present). For each 
   contact-identified stage) — judge per row and say so in the report.
 - Idempotent: re-running refreshes summaries, never resets stage or status.
 
+## The brain's first pass — only when one was just connected
+
+If the prelude connected a brain (and only then), invoke **`update-brain`** once in `full` mode
+with a **small, stated budget** — enough that the first planner run has context, not a history
+crawl. It verifies its own writes; carry its ⚠️ into your report rather than reporting a blind
+success. **No brain → skip it and say so in one line**, never silently do nothing. *(From there
+the brain fills two ways: the planner's targeted lookups when it meets an entity it doesn't know,
+and the daily routine's Friday refresh.)*
+
 ## The projection — a rendering, never the truth (§7, §15.2)
 
 Rebuild `projectionTarget` **whole, from the rows** (`pb-get-stages` · `pb-list-entries` ·
@@ -173,7 +202,8 @@ version of what you do here:
 
 Per-step ✅/🔧/⚠️ throughout, then: the playbook's name · stages declared · decision points and entries by status ·
 **the holes, by name** (they are the co-construction backlog) · vigilance entries seeded ·
-dossiers by stage · what was owner-protected · any source unreadable and what it cost. Close with
+dossiers by stage · what was owner-protected · **the brain: connected (and seeded) or not, in one
+line either way** · any source unreadable and what it cost. Close with
 where the projection lives and the one line that frames the pilot: *the playbook will fill up as
 decisions land.*
 

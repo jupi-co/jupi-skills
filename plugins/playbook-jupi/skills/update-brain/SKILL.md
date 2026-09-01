@@ -22,6 +22,12 @@ You build and maintain **the brain**: what Playbook-Jupi knows about the user an
 **Read `references/supermemory.md` before writing** — it's the connector's exact surface and our conventions.
 
 ## Store: Supermemory via the connector (connector-simple)
+- **No connector → say so plainly and stop; never fail loudly.** If the memory tools don't
+  resolve, this workspace has no brain — a supported configuration, not a broken one. Return one
+  short paragraph: what you would have looked up, that the playbook itself runs unaffected
+  (rules, dossiers and decisions never depended on you), and how to add it — an MCP connector to
+  `https://mcp.supermemory.ai/mcp` with `Authorization: Bearer sm_<key>` from app.supermemory.ai,
+  or just re-run `setup-playbook-jupi`, which walks it. Then stop: no half-run, no retry loop.
 - **Write** with the `memory` tool (`save`); **read** with `recall`. Both take a `containerTag`.
 - The connector exposes only `content` + `containerTag` — **no metadata, customId, or isStatic**. We compensate: **encode provenance in the content text**, and use the playbook store's **`crawl_state` cursor** (the `pb-get-cursor`/`pb-advance-cursor` tools) so we never re-ingest the same window (that's our dedup).
 - **Container tag** = one user-level tag **`user_<jupiUserId>`** — **Jupi is the reference for the userId**: read it from **`get-current-user-tool`** (the Jupi connector's whoami — the same principal that scopes every `pb-*` call) at run start; do **not** derive identity from Supermemory's `whoAmI`, and never from a config file. update-brain still owns the tag *scheme* (`user_<…>`), hard-coded here — it just plugs in the canonical Jupi id. (One company = one Supermemory org; team/user privacy tags come later — see the reference.)
