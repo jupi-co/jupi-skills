@@ -28,7 +28,13 @@ local reader is already in the conversation).
    title · what Jupi prepared · dossier link · how long it has been waiting.
 4. **Guardrail events** — tripwire hits, out-of-script classifications, unmatched inbound the
    watch reported.
-5. **Footer** — `mode` · `decisionBudget` · what this run left for the next one.
+5. **Gaps — what you didn't know** — every entity or fact you needed while framing a step or a
+   decision and didn't have: *"who <person> at <org> is"*, *"whether <company> is already a
+   customer"*. One line each, named concretely, **whether or not a brain is connected** — with
+   one, it's what the brain couldn't answer; without one, it's what a brain would have answered.
+   Empty is written out. This is the only measure of what missing context actually costs, and it
+   is the evidence behind keeping, adding, or dropping the memory connector.
+6. **Footer** — `mode` · `decisionBudget` · what this run left for the next one.
 
 `--dry-run`: the report IS the deliverable — say the window is as-of the last real refresh.
 

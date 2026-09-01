@@ -78,11 +78,12 @@ is settled, and halt — a re-run resumes.
      under the same Jupi identity carries over on its own; a company-wide container does not,
      today). Offer the first pass below to start one from their connected tools.
    - **No connector → onboard, don't error** — three things, in the user's language: **what it
-     buys them** (Jupi remembers the people, companies and projects it meets across runs instead
-     of re-learning them; it picks up how they write to each contact, so drafts land in their own
-     register without re-reading their sent mail every run; decisions arrive carrying context on
-     the counterparty) · **that the playbook runs fine without it** (nothing blocked — it just
-     asks more questions and pays more per draft) · **the steps**: if their company already has a
+     buys them** — Jupi brings the company context it already has into the process: it knows who
+     the people and orgs in these dossiers are, so **the decisions it puts to them are better
+     framed** (who this contact is, whether that company is already a customer) instead of asking
+     from zero · **that the playbook runs fine without it** (nothing blocked, no rule or decision
+     depends on it — it just has less context to frame with) · **the steps**: if their company
+     already has a
      Supermemory, connect it as an **MCP connector** (custom MCP server, URL
      `https://mcp.supermemory.ai/mcp`, header `Authorization: Bearer sm_<key>`); if not, an
      account at app.supermemory.ai issues the key first. Then they tell you, and you re-probe.

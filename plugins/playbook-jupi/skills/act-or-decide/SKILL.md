@@ -112,7 +112,9 @@ Per decision point touched:
    `recall` on the entities involved **when a memory connector is present** — **no brain is a
    supported configuration, not a failure**: skip that move, dig with the other two, and say once
    in the report that you're running without one (it costs context, never authority — the gate is
-   unaffected). If research **settles** it, that becomes the pre-filled
+   unaffected). **Either way, name what you still didn't know** — the person, the org, the fact —
+   in the report's Gaps block: with a brain that's what it couldn't answer, without one it's what
+   a brain would have. If research **settles** it, that becomes the pre-filled
    recommendation — write it back as an `inferred` entry (provenance: what you found) so the next
    run starts ahead; *(in dry-run: reason from reads only, write nothing, and say what you'd have
    recorded)*. If research doesn't settle it → **DECIDE**.
