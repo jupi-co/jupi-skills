@@ -10,19 +10,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - name: shared/ parity (playbook-jupi is a fork of proactive-jupi)
-        # Fork policy (playbook-jupi design §1): db.mjs and ensure-deps.sh stay
-        # byte-identical across the two plugins. Edit the proactive-jupi copy,
-        # then re-copy — never patch the playbook-jupi side alone.
+      - name: playbook-jupi carries no data layer of its own
+        # Replaces the old shared/ byte-parity check: the fork policy ended when
+        # playbook-jupi moved its store behind the pb-* MCP tools on the Jupi
+        # connector (TECH-547) and deleted its Neon helpers. proactive-jupi keeps
+        # its own db.mjs and stays on Neon — the two plugins are now independent.
         run: |
-          for f in db.mjs ensure-deps.sh; do
-            if ! cmp -s "plugins/proactive-jupi/shared/$f" "plugins/playbook-jupi/shared/$f"; then
-              echo "::error file=plugins/playbook-jupi/shared/$f::shared/$f has drifted between proactive-jupi and playbook-jupi — the fork policy requires byte-identical copies. Edit plugins/proactive-jupi/shared/$f, then re-copy."
-              diff "plugins/proactive-jupi/shared/$f" "plugins/playbook-jupi/shared/$f" || true
-              exit 1
-            fi
-          done
-          echo "shared/ parity OK (db.mjs, ensure-deps.sh)"
+          if grep -rnE 'db\.mjs|playbook\.mjs|ensure-deps|apply-schema|neonConnString' plugins/playbook-jupi/; then
+            echo "::error::plugins/playbook-jupi must not reference the deleted Neon helpers — it reads and writes through the pb-* tools on the Jupi connector."
+            exit 1
+          fi
+          echo "playbook-jupi data-layer check OK (no Neon helper references)"
       - uses: actions/setup-node@v4
         with:
           node-version: "20"

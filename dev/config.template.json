@@ -1,5 +1,6 @@
 {
-  "_comment": "Dev-bench instance config — copy to <repo-root>/.playbook-jupi/config.local.json (gitignored) and fill the <angle-bracket> placeholders. Never commit the filled copy: it holds the Neon string and the dev mailbox address. Keys starting with '_' are documentation; nothing reads them.",
+  "_comment": "Dev-bench instance config — copy to <repo-root>/.playbook-jupi/config.local.json (gitignored) and fill the <angle-bracket> placeholders. Never commit the filled copy: it holds the dev mailbox address. Keys starting with '_' are documentation; nothing reads them.",
+  "_status": "Since TECH-547 the PLUGIN reads none of the Neon keys below — its store is the pb-* tools on the Jupi connector, scoped by the connector's own auth. 'neonConnString' and 'jupiUserId' now serve only the Neon-era bench scripts (dev/seed.mjs, dev/reset.mjs), which are pending a re-point at the backend; see dev/DEV-ENV.md.",
   "_jupiWorkspace": "the Jupi workspace bench decisions go to — the shared test workspace, NEVER a real one (probe: search-decisions-tool with this slug returns {\"items\":[...]}; 'Group not found' means a typo)",
   "jupiWorkspace": "test",
   "_jupiUserId": "the tenant key stamped on every Neon row — the row-level isolation. The bench uses a synthetic id on the SHARED project; dev/seed.mjs and dev/reset.mjs refuse to run under any tenant not prefixed 'dev-' or 'eval-'",
