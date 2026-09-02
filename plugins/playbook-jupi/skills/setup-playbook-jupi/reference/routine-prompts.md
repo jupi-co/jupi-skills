@@ -107,6 +107,32 @@ if something is missing, close the run record saying so and stop.
    touched, every open handoff, every cut).
 ```
 
+## What a routine is created with — the wiring, not just the prompt
+
+A prompt alone is a routine that boots, finds nothing to run against, and stops cleanly — which
+is the failure that looks most like success. The create call carries the wiring, and setup reads
+each routine back to check it stuck:
+
+- **`mcp_connections`** — the Jupi connector (the store and the decisions) and the watched
+  source's connector (Gmail for a mailbox). A connector's `connector_uuid` is the prefix of its
+  tool names in the setup session (`mcp__<uuid>__…`) — a uuid prefix is a claude.ai connector,
+  the only kind a routine can use; a `plugin_…` prefix is the plugin-bundled server, unusable
+  here. The Jupi URL is the plugin's `.mcp.json`. A connector whose URL the inventory doesn't
+  show is one the user attaches in the routine editor — said in the prelude, never after.
+- **`enabled_plugins` + `extra_marketplaces`** — the routine invokes skills that exist only where
+  `playbook-jupi` and its `jupi-skills` dependency are enabled, from the `jupi-skills`
+  marketplace. Both fields are echoed by `list`/`get`. If a create left them empty, the API
+  ignored the shape you sent: mirror the shape from any routine on the account where a plugin was
+  enabled by hand (the list echoes it), and otherwise hand the user the two editor steps.
+- **The permission-mode control event** (`set_permission_mode` → `auto`) ahead of the prompt
+  event, so an unattended run never waits on a prompt it cannot answer.
+- **Cron in UTC** (the API's clock), described to the user in theirs.
+
+**Verify with `get` after every create or update**: `mcp_connections` and `enabled_plugins` hold
+what you sent. What didn't stick is reported as ⚠️ with the exact editor steps — never as a
+success. And the prompts stay honest without the wiring: a routine that finds no skill or no
+connector opens its run record, says what is missing, and stops — it never error-spams.
+
 ## Naming — load-bearing, and it must not collide with proactive's routines
 
 The scheduler's reconcile matches on the exact name (the API gives no stable key). Fixed
