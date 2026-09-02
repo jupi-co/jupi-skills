@@ -52,8 +52,10 @@ tripwires); **you observe and attach.**
 2. **Tools:** load `pb-get-stages`, `pb-list-dossiers`, `pb-attach-signal`, `pb-get-cursor`,
    `pb-advance-cursor` from the installed Jupi connector via ToolSearch.
 3. **The frame:** `pb-get-stages` · `pb-list-dossiers`.
-   No declared lifecycle, or zero dossiers → **the world isn't bootstrapped; report and stop** — an
-   inbound watch with no frame to match against has nothing legitimate to do. If `inboundStage` is
+   No declared lifecycle → **the world isn't bootstrapped; report and stop.** A lifecycle but zero
+   dossiers → **nothing is tracked yet; say so and stop** (*"add the first item to the list and I'll
+   start watching"*) — day zero, not a broken install. Either way, an inbound watch with no frame
+   to match against has nothing legitimate to do. If `inboundStage` is
    missing or not in the declared lifecycle, attach **without a stage move** (permalink + confidence
    still land) and flag the config gap in the summary rather than inventing a stage.
 4. **The recipe** for the source kind: `${CLAUDE_PLUGIN_ROOT}/shared/signal-sources.md` — for mail,
