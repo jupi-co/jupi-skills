@@ -35,6 +35,20 @@ scoping over a shared Neon project — the auth boundary is the physical boundar
 needs the id itself — the brain's container tag — reads it from `get-current-user-tool`, never
 from config.
 
+## The instance every write addresses
+
+A workspace runs a **playbook instance**, and **`pb-create-playbook` is the only tool that creates
+one** — every other `pb-*` write, and every decision linking a playbook, addresses an instance that
+already exists. So the bootstrap declares it first, before the lifecycle; it is idempotent on the
+name (`created:false` on a re-run, nothing touched), which makes a rename an upsert of the reserved
+`playbook-name` entry, never a second instance.
+
+Each tool takes an optional `playbook` argument — *"omit when the workspace has exactly one; an
+unknown name is an error, never a new playbook."* **The skills omit it**, which is legal only while
+the workspace holds exactly one instance. Until they pass it, **one playbook per Jupi workspace** is
+a hard constraint, and the workspace slug is the unit of isolation between two processes (or between
+a rehearsal and a live install).
+
 ## The one invariant everything rests on (§4)
 
 **A rule's authority comes from a human, never from extraction.** Entries enter the store two ways —
