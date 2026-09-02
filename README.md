@@ -220,15 +220,19 @@ Open a session **in the workspace where your playbook config lives** — the ski
 
 Skip the first line if the marketplace is already registered (then `/plugin marketplace update jupi-skills` refreshes it). Installing pulls the `jupi-skills` dependency and the bundled Jupi MCP automatically; the skills appear namespaced as `/playbook-jupi:…`.
 
-### Configure
+### Configure — you don't
 
-Instance settings live under `.playbook-jupi/` at the workspace root (gitignored). **No secret goes in it** — the engine's store is reached through the Jupi connector, authenticated by the connector itself:
+Run the bootstrap and answer four questions about your work:
 
-```bash
-cp dev/config.template.json .playbook-jupi/config.local.json
+```
+/playbook-jupi:setup-playbook-jupi
 ```
 
-Fill the placeholders in the copy — the template's `_`-prefixed keys document what each value means. The config's **keys** are engine vocabulary (`watchedSource`, `dossierSource`, `inboundStage`, …); its **values** are your playbook's content.
+It asks which team space this process belongs to, where your process is written down, where you keep the list of what you're tracking, and which mailbox to watch — then **finds those documents and writes the config itself**, at `.playbook-jupi/config.local.json` (gitignored). Everything else is defaulted or derived: the inbound stage, for one, names a lifecycle stage the bootstrap is about to declare, so it fills it in after extraction rather than asking you to guess it.
+
+**No secret goes in that file** — the engine's store is reached through the Jupi connector, authenticated by the connector itself. It stays hand-editable afterwards if you want to tune a threshold or switch `guardrails.mode` from `draft` to `perform`; a re-run carries forward every value you touched.
+
+*(Contributors working the dev bench have a filled starting point at [`dev/config.template.json`](dev/config.template.json) — that one is for the bench, not for users.)*
 
 ### Status — what runs today
 

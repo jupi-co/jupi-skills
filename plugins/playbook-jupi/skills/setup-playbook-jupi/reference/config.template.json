@@ -1,0 +1,29 @@
+{
+  "_comment": "Starting point for .playbook-jupi/config.local.json — SETUP fills and writes this, the user never copies or edits it by hand. No key here may ever hold a secret: the store is reached through the Jupi connector, authenticated by the connector itself. Keys starting with '_' are documentation; nothing reads them.",
+
+  "_interview": "The four values below are the only ones a human answers. Setup asks them as questions about their work and resolves each itself — never as a path to type.",
+  "_jupiWorkspace": "the Jupi team space this process belongs to (probe: search-decisions-tool with this slug answers; 'Group not found' means wrong slug)",
+  "jupiWorkspace": "<workspace-slug>",
+  "_playbookSources": "the owner documents the playbook is extracted from — an array of paths/refs. Several is normal: the main process doc plus the templates it refers to",
+  "playbookSources": ["<process-doc>"],
+  "_dossierSource": "where the tracked items are listed (a sheet, a CSV, a database) — one row per dossier",
+  "dossierSource": "<the-list>",
+  "_watchedSource": "the inbound source the watch sweeps — an address means a mailbox. Read from the connected mail account and confirmed, never typed. Absent = the watch degrades; extraction and planning still run",
+  "watchedSource": "<watched-mailbox>",
+
+  "_derived": "Written by setup after extraction, because it names a stage that does not exist at interview time.",
+  "_inboundStage": "the declared-lifecycle stage meaning 'something came in and is waiting to be handled'. Must be one of the declared stages; absent = inbound attaches without a stage move and the gap is flagged",
+  "inboundStage": null,
+
+  "_defaults": "Set by setup and mentioned in one line — never asked.",
+  "_projectionTarget": "where the human-readable playbook projection is rendered, whole, from the rows",
+  "projectionTarget": ".playbook-jupi/playbook.md",
+  "_guardrails": "mode 'draft' = nothing leaves the user's tools without a settled decision (conservative until trust builds); 'perform' enables real verbs. decisionBudget caps decisions raised per planner run",
+  "guardrails": { "mode": "draft", "decisionBudget": 5 },
+  "_crawlWindowDays": "how far back the watch sweeps when no cursor exists yet",
+  "crawlWindowDays": 30,
+  "_leaseMinutes": "the run lease: any run (catchup, daily, go, process-reply) yields to a live run younger than this; older = stalled, taken over",
+  "leaseMinutes": 10,
+  "_suspendThreshold": "counter-evidence (edited outcomes) before a validated entry is automatically suspended back to case-by-case; a severe incident suspends at 1 regardless",
+  "suspendThreshold": 2
+}
