@@ -128,6 +128,25 @@ default). A question that only a human can answer is worth asking; every other q
    **"Not now" or no answer is a complete answer**: note it, continue, and say it once in the
    closing report (*"running without a brain — re-run setup any time to add it"*). Never block,
    never re-ask later in the run.
+6. **The two routines — say what you'll create, and get the go-ahead here.** After the boundary you
+   create two cloud-scheduled routines, `Playbook-Jupi — catchup` and `Playbook-Jupi — daily`
+   (`reference/routine-prompts.md`). Creating a standing automation is exactly what a permission
+   gate stops on — in auto mode it will refuse a second one that has no explicit consent in the
+   conversation — so the consent lives here, in the user's words: name both, say what each does and
+   when (in their clock), and ask for one explicit yes. Then **inventory what the routines must
+   reach, and say now which parts you can wire from here and which the user will finish in the
+   routine editor** — an unattended run that discovers a missing piece can only stop, and a report
+   that reveals it afterwards is the surprise this prelude exists to prevent:
+   - **the Jupi connector** — attachable. Its `connector_uuid` is the prefix of the `pb-*` tool
+     names in this session (`mcp__<uuid>__pb-get-stages`); the URL is the plugin's `.mcp.json`. A
+     prefix that reads `plugin_…` instead of a uuid is the plugin-bundled server, which routines
+     cannot use — then Jupi must be connected as a claude.ai connector first; say so.
+   - **the watched source's connector** (Gmail for a mailbox) — same trick for the uuid. If its URL
+     is not in the connector inventory the scheduler shows you, the user attaches it in the editor.
+   - **the plugin itself** — the routines invoke skills that exist only where `playbook-jupi` (and
+     its `jupi-skills` dependency) is enabled; the create carries `enabled_plugins` and
+     `extra_marketplaces`, and you verify it stuck (§Schedule).
+   - **approval mode** — no API parameter; the user sets it in the editor. Say it now, not last.
 
 > **✋ needs-you done — the rest runs unattended.**
 
@@ -247,17 +266,31 @@ belongs in an entry first.
 ## Schedule the routines (§13 rung 1)
 
 **Read `reference/routine-prompts.md` first** — it holds both templates (catchup sentinel +
-daily full sweep), the carried-config rule, the run lease, and the fixed names. The short
-version of what you do here:
+daily full sweep), the carried-config rule, the run lease, the fixed names, and **the wiring a
+routine must be created with**. The short version of what you do here:
 
 - **Two cloud-scheduled routines, and only two**: `Playbook-Jupi — catchup` (business hours,
-  30–60 min, cheap no-op exit) and `Playbook-Jupi — daily` (one full sweep; Friday playbook
+  hourly, cheap no-op exit) and `Playbook-Jupi — daily` (one full sweep; Friday playbook
   review). Fixed names — the reconcile matches on them, and they must not collide with the
   proactive pair on the same account.
+- **Create them wired, not bare.** Each create carries what the prelude inventoried:
+  `mcp_connections` (the Jupi connector and the watched source's), `enabled_plugins` +
+  `extra_marketplaces` (the plugin and its dependency, from this marketplace), and the
+  permission-mode control event so an unattended run never waits on a prompt. **Then read each
+  routine back (`get`) and check `mcp_connections` and `enabled_plugins` hold what you sent** — a
+  field the API ignored is a routine that boots, finds no skills, and stops. What didn't stick goes
+  in the report as ⚠️ with the exact editor steps, never as a success.
 - **Reconcile, don't re-create**: `list` first, match the exact name, `update` in place; then
-  **re-`list` and assert exactly one task per name** — delete extras and say so. Run the
-  `list`/`create`/`update` calls **in a subagent** (each response echoes the full prompt plus
-  the connector inventory — big enough to overflow this conversation).
+  **re-`list` and assert exactly one task per name** — delete extras and say so. Run the whole
+  scheduling pass — `list`, both creates or updates, the read-backs — **in one subagent turn**
+  (each response echoes the full prompt plus the connector inventory — big enough to overflow this
+  conversation), with the prelude's consent restated in its brief.
+- **A refused create is not a loop.** If the harness refuses one of the two (a permission gate on
+  creating automations), don't retry it verbatim and don't stop the run: finish everything else,
+  and in the report hand over the **complete** definition of the missing routine — name · cron in
+  the user's clock and in UTC · description · the full prompt · connectors · plugins — so they can
+  create it in one paste at claude.ai/code/routines, plus one line offering to retry. A cron alone
+  is not a definition.
 - **Fill the one-line `description` field** with the plain-language sentences from the
   reference — phrased to match the cron you actually set.
 - **Anchor cadences to the user's day** where you know it; sensible clock times otherwise.
@@ -270,17 +303,47 @@ version of what you do here:
 > anything has actually fired since creation — report which of the three states you see
 > (never ran / died mid-run / degraded).
 
-## Report
+## Report — two versions, and the user's is the one they read
 
-Per-step ✅/🔧/⚠️ throughout, then: the playbook's name **and whether the instance was created or
-already there** · stages declared · decision points and entries by status ·
-**the holes, by name** (they are the co-construction backlog) · vigilance entries seeded ·
-dossiers by stage · what was owner-protected · **the brain: connected (and seeded) or not, in one
-line either way** · any source unreadable and what it cost. Close with
-where the projection lives, **where its config now lives and the two or three values worth knowing in
-it** (mode `draft`, the watched mailbox, the inbound stage — named in plain words, never as a file to
-go and edit), and the one line that frames the pilot: *the playbook will fill up as
-decisions land.*
+The **run log** is the technical record — per-step ✅/🔧/⚠️, then: the playbook's name and whether
+the instance was created or already there · stages declared · decision points and entries by status
+· the holes by point id · vigilance entries seeded · dossiers by stage · what was owner-protected ·
+the brain, one line · any source unreadable and what it cost · the routines: created, what wiring
+stuck and what didn't, their run state on a re-run. It renders **on request** — *"show me the
+technical detail"* — or under `--technical`; never as the default final message.
+
+**The final message is the user's version.** The rules are `../act-or-decide/reference/REPORTING.md`
+§the user's version, and they apply here unchanged: assistant voice, **the user's language** (the
+language of their documents), low verbosity, complete against the run's facts, **no engine
+vocabulary**. On the reference setup run the readable version didn't exist: the report was written
+in the store's words — kebab-case stage ids, `declared`/`inferred`, `tripwire-*`, `created:true`,
+skill names — and the person it was for could not use a word of it. What the rule means for setup:
+
+- **Their nouns, never ours.** "Dossier" is *their* word for the items — accounts, candidates,
+  files. A stage is named by its **label**, the way their document names it, never the kebab-case
+  id. A **tripwire** is *"the subjects I'll always stop and ask you about — health data, a broker's
+  exclusivity, someone disputing they're a client"*. A **hole** is *"what I don't know yet, and will
+  ask you every time until you settle it"*. **`declared` / `inferred`** is *"what your document
+  says"* / *"what I read between the lines — check me on it"*. **Validated** is *"settled by you"*;
+  **owner-protected** is *"kept as you settled it"*. The **projection** is *"the readable playbook"*.
+  The **instance** goes unmentioned — they asked for a playbook, they have one.
+- **No skill names, ever** — not in the summary, not in the routines' status, not in what they
+  must finish by hand. *"The routines need the Playbook-Jupi plugin enabled"* is one product name;
+  `act-post-decision / refresh-backlog / act-or-decide` is three things they cannot act on. The
+  proper nouns are Jupi, Playbook-Jupi, the playbook's own name, and the tools they know (Gmail,
+  Drive).
+- **Numbers only where they change what the reader would do**: the holes — each one, by its
+  question, because those are what they will be asked and can settle today · the items by their
+  first step, because that says where each stands · that nothing is settled yet, because that is
+  day one. Not entry counts by status, not `created:true`.
+- **What awaits them, and what is on their side, as a checklist** — the holes to settle · the
+  routines to approve or to finish wiring (the exact steps, in the editor's words) · the brain, if
+  they want it later · the mailbox, if none is watched. One line each even when empty: these are the
+  blocks the reader most needs and would never think to ask for.
+- **Close on posture, not config**: *"I'm in draft mode — nothing leaves your tools without your
+  decision. Today the playbook is mostly what you haven't told me yet; that's day one, and it fills
+  up as decisions land."* Where the readable playbook and its settings live is one line, in plain
+  words — never a file to go and edit.
 
 ## Where you write
 - **The playbook store** via the `pb-*` tools: the **instance** (`pb-create-playbook`, the first
