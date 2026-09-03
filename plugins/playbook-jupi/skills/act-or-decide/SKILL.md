@@ -154,9 +154,14 @@ Per decision point touched:
   bookkeeping action `act-post-decision` performs as a store write (*record in the playbook that
   <case> was settled as <answer>*). An action-less option can be chosen but never marked carried
   out, and the loop cannot tell it from one it already handled. **When the connector serves the
-  settlement ledger** (`pb-record-decision`, `shared/playbook-contract.md`), record the question
-  you just asked — decision id, point, scope, dossiers, kind — right after posting: that row is how
-  the post-decision loop later knows what the answer is *about*, structurally, gated dossier or not. Description is HTML, links everywhere,
+  settlement ledger** (`shared/playbook-contract.md`), record the question you just asked **right
+  after posting** — `pb-record-decision` with `decision_id`, `point_id`, `scope_key`, `dossier_ids`
+  (omit or empty when it gates none) and `kind` (`instance` · `rule` · `out_of_script` ·
+  `parameter` · `asset` · `amendment` — the template you used names it), plus this run's `run_id`.
+  That row is how the post-decision loop later knows what the answer is *about*, structurally,
+  gated dossier or not. It is idempotent on the decision (`recorded:false` = already there), so a
+  retried post never doubles it — and a decision you fail to record is one the loop can only find
+  the expensive way. Description is HTML, links everywhere,
   say **"Jupi"** never the plugin name. Capture the decision permalink the tool returns.
 - **Gate the dossiers**: `pb-set-task-gating` (the dossier, the decision id array) +
   `pb-set-task-status` → `blocked` for every clustered dossier. `act-post-decision` unblocks

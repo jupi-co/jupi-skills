@@ -76,21 +76,37 @@ it posts** — it is how the post-decision loop finds a settlement that gates no
 
 **A decision's lifecycle ends at FINALIZED.** The owner answered; the decision has nothing more to
 say. Whether a playbook has *absorbed* that answer is the playbook's state, not the decision's — so
-the fact lives in the playbook domain, never as an `EXECUTED` status on the Decide side. The object
-the store still lacks is a **settlement ledger: the questions this playbook asked, and the answers
-it absorbed.** Three verbs:
+the fact lives in the playbook domain, never as an `EXECUTED` status on the Decide side. That is the
+**settlement ledger: the questions this playbook asked, and the answers it absorbed** — one row per
+decision, cascading from both the playbook and the decision. Three verbs, and they carry `playbook`
+like every other `pb-*` tool:
 
 - **`pb-record-decision`** — at creation: *this playbook raised decision X for point P, scope S,
-  dossiers D, of kind instance | rule | out-of-script | parameter | asset | amendment.* The context
-  becomes structured; nothing is parsed out of a description again, and a decision that gates no
-  dossier is on the record like any other.
-- **`pb-list-settlements`** (`pending`) — the server-side join: decisions this playbook recorded
-  **∧** FINALIZED on the Decide side **∧** no `applied_at`. The loop's whole input, the way
-  `pb-list-blocked` was — one read, no window, nothing missed.
-- **`pb-apply-settlement`** — the loop sets `applied_at` with the run id and the effects (entries
-  written, stages moved, dossiers released). Idempotent: applying again returns `applied:false`.
+  dossiers D, of kind `instance` | `rule` | `out_of_script` | `parameter` | `asset` | `amendment`.*
+  Arguments `decision_id` (uuid), `point_id`, `scope_key?`, `dossier_ids?` (empty for a settlement
+  that gates nothing), `kind`, `run_id?`. The context becomes structured; nothing is parsed out of a
+  description again, and a decision that gates no dossier is on the record like any other.
+  Idempotent on the decision — a second record returns `recorded:false`, row untouched.
+- **`pb-list-settlements`** (`status`: `pending` — the default — `applied` | `all`) — the
+  server-side join: decisions this playbook recorded **∧** FINALIZED on the Decide side **∧** no
+  `applied_at`. The loop's whole input, the way `pb-list-blocked` was — one read, no window. Each
+  row already carries what the loop would otherwise have re-fetched: `point_id`, `scope_key`,
+  `dossier_ids`, `kind`, `title`, `url`, `closed_at`, `selected_option_ids`, and the **selected**
+  options' `actions` (`id`, `option_id`, `tool`, `title`, `instruction`, `status`, `done_at`).
+  **That is what spares a `get-decision` per row**, not just the search.
+- **`pb-apply-settlement`** (`decision_id`, `run_id`, `effects`) — the loop sets `applied_at` with
+  the run id and the effects, a free-form object (traces, ids, counts: entries written, stages
+  moved, dossiers released). Idempotent: applying again returns `applied:false`, effects untouched.
 
-Until the connector serves them, the loop runs an **interim** measured against the live tools: it
+**Both idempotency guards live in the database, not in a read-then-write** — a unique constraint on
+recording, an `applied_at IS NULL` filter on applying — so two concurrent runs can neither
+double-insert nor overwrite the first run's effects.
+
+**The ledger only holds what was recorded.** A decision finalized before `pb-record-decision`
+existed, or posted by hand, is not in it and never will be — there is no backfill. So the interim
+below is not simply switched off the day the ledger is served: it stays as the second read until no
+un-recorded FINALIZED decision of this playbook is left un-absorbed. Until then, the loop runs the
+**interim** measured against the live tools: it
 reads the 50 most recent decisions and opens each FINALIZED one to check the link
 (`search-decisions-tool`'s `activeSince` **ignores finalization** — a decision closed inside the
 window is not returned, its last activity stays at creation — and the list's `hasPendingAction`

@@ -51,7 +51,8 @@ if something is missing, close the run record saying so and stop.
 3. THE CHEAP NO-OP CHECK — two reads, then exit if quiet:
    a. Any settled decision of this playbook not yet absorbed — act-post-decision's
       discovery: the settlement ledger (pb-list-settlements, pending) when the connector
-      serves it; otherwise BOTH interim sources — the blocked dossiers' gating decisions
+      serves it, PLUS the two interim sources for as long as decisions finalized before
+      the ledger existed are still unabsorbed — the blocked dossiers' gating decisions
       AND the playbook-linked FINALIZED decisions (list-my-decisions → get-decision →
       linked to this playbook) with a selected-option action still to-do, or closed since
       the last successful run and carrying no action. The blocked rows alone miss every

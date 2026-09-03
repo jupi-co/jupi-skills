@@ -60,7 +60,8 @@ and hand the dossier back to the process. You are the DECIDE-path counterpart to
 1. **Config**: `guardrails` (`mode`), `jupiWorkspace` (the Jupi group slug), `playbook` (which
    playbook this folder runs — carried on every `pb-*` call, and the one whose linked decisions you
    poll).
-2. **Tools** (ToolSearch, installed Jupi connector): `pb-list-blocked` · `pb-set-task-status` ·
+2. **Tools** (ToolSearch, installed Jupi connector): `pb-list-settlements` · `pb-apply-settlement`
+   (the ledger, when served) · `pb-list-blocked` · `pb-set-task-status` ·
    `pb-set-stage` · `pb-upsert-entry` · `pb-list-entries` (the reserved `playbook-name` entry) ·
    `pb-run-last` · `list-my-decisions-tool` · `get-decision` · `mark-option-action-done-tool`.
 3. Worker: the **`execute-action`** skill.
@@ -89,11 +90,21 @@ is FINALIZED.**
 ## The flow
 
 ### Stage 1 — Detect: every settled decision of this playbook not yet carried out
-**When the connector serves the settlement ledger** (`pb-list-settlements`, `pending` —
-`shared/playbook-contract.md`, §Decisions ↔ playbook), **that list is your whole fetch set**: the
-decisions this playbook raised, FINALIZED, not yet applied — with their point, scope and dossiers
-already structured. No other read, no window. Load it via ToolSearch first; **absent → the interim
-below**, two sources, always both. The blocked rows alone miss every decision that gates no dossier
+**When the connector serves the settlement ledger** (`pb-list-settlements`, `status: pending` is
+the default — `shared/playbook-contract.md`, §Decisions ↔ playbook), **that list is your fetch
+set**: the decisions this playbook raised, FINALIZED, not yet applied. One read, no window — and
+each row already carries `point_id`, `scope_key`, `dossier_ids`, `kind`, `title`, `url`,
+`closed_at`, `selected_option_ids` **and the selected options' `actions` with their `status` /
+`done_at`**, so Stage 1's step 3 reads off the row: **no `get-decision` per row, and no window
+case**. Load it via ToolSearch first; **absent → the interim below**, two sources, always both.
+
+**But the ledger only holds what was recorded**, and there is no backfill: a decision finalized
+before `pb-record-decision` existed, or posted by hand, will never appear in it. So the day the
+ledger arrives you do **not** stop reading the linked set — keep both until no un-recorded
+FINALIZED decision of this playbook is left un-absorbed, and say in your report which source each
+settlement came from while both are running.
+
+The blocked rows alone miss every decision that gates no dossier
 — an unmatched inbound escalated to the owner, a global rule settled outside a cluster — and on the
 reference run that is exactly the settlement `/go` closed "no-op" over, one minute after the owner
 finalized it.
@@ -107,8 +118,8 @@ finalized it.
    `activeSince` ignores finalization (a decision closed inside the window is not returned — its
    last activity stays at creation), and the list's `hasPendingAction` counts the un-chosen
    options' actions. Neither is a filter you can use; the reads are the price of not missing a
-   settlement until the backend lists decisions by playbook (`shared/playbook-contract.md`, §what
-   the backend still owes).*
+   settlement until the ledger covers every settled decision (`shared/playbook-contract.md`,
+   §Decisions ↔ playbook).*
 3. **"Not yet carried out"**, per FINALIZED decision. The winning option(s) are the top-level
    `selectedOptionIds`; each carries its structured option-actions (`id`, `title`, `instruction`,
    `tool`, `status: todo|done`, attached by `act-or-decide` via `add-option-actions-tool`):
@@ -167,8 +178,12 @@ For each `blocked` task, decide its fate from what you learned in Stages 1–2:
   dossiers its settlement concerns** — from the ledger row when there is one, else the ones its
   context mentions or its actions touched — in your return: the orchestrator re-plans those exactly
   as it re-plans the released ones.
-- **Close the settlement in the playbook** — `pb-apply-settlement` (decision id, this run's id, the
-  effects: entries written, stages moved, dossiers released) **when the connector serves it**. That
+- **Close the settlement in the playbook** — `pb-apply-settlement` (`decision_id`, `run_id` = the
+  id `pb-run-open` gave this run, `effects` = a free-form object: entries written, stages moved,
+  dossiers released, the execution traces) **when the connector serves it, and only for a settlement
+  that is in the ledger** — one that reached you through the interim was never recorded, so there is
+  nothing to apply. `applied:false` means a previous run already absorbed it: not an error, and its
+  effects are left untouched. That
   row, not a decision status, is what "absorbed" means: a decision's lifecycle ends at FINALIZED, and
   what the playbook did with the answer is the playbook's record. Without the ledger, the `done`
   marks and the window (Stage 1) stand in for it.
