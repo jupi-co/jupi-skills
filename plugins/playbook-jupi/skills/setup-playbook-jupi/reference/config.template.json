@@ -1,9 +1,11 @@
 {
   "_comment": "Starting point for .playbook-jupi/config.local.json — SETUP fills and writes this, the user never copies or edits it by hand. No key here may ever hold a secret: the store is reached through the Jupi connector, authenticated by the connector itself. Keys starting with '_' are documentation; nothing reads them.",
 
-  "_interview": "The four values below are the only ones a human answers. Setup asks them as questions about their work and resolves each itself — never as a path to type.",
+  "_interview": "The five values below are the only ones a human answers. Setup asks them as questions about their work and resolves each itself — never as a path to type.",
   "_jupiWorkspace": "the Jupi team space this process belongs to (probe: search-decisions-tool with this slug answers; 'Group not found' means wrong slug)",
   "jupiWorkspace": "<workspace-slug>",
+  "_playbook": "WHICH playbook this folder runs — the instance name every pb-* call carries, so one workspace can run several. Set from the prelude's new-or-existing question; the address, not the label (renaming the playbook upserts the playbook-name entry and leaves this alone)",
+  "playbook": "<playbook-name>",
   "_playbookSources": "the owner documents the playbook is extracted from — an array of paths/refs. Several is normal: the main process doc plus the templates it refers to",
   "playbookSources": ["<process-doc>"],
   "_dossierSource": "where the tracked items are listed (a sheet, a CSV, a database) — one row per dossier",

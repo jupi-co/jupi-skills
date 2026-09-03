@@ -44,10 +44,29 @@ name (`created:false` on a re-run, nothing touched), which makes a rename an ups
 `playbook-name` entry, never a second instance.
 
 Each tool takes an optional `playbook` argument — *"omit when the workspace has exactly one; an
-unknown name is an error, never a new playbook."* **The skills omit it**, which is legal only while
-the workspace holds exactly one instance. Until they pass it, **one playbook per Jupi workspace** is
-a hard constraint, and the workspace slug is the unit of isolation between two processes (or between
-a rehearsal and a live install).
+unknown name is an error, never a new playbook."* **The skills pass it**, from the `playbook` key
+their instance config carries, which is what lets **one workspace run several playbooks** side by
+side — two unrelated processes, or a rehearsal next to a live install. A config with no `playbook`
+key is the legacy shape: the argument is omitted, which stays legal while the workspace holds
+exactly one instance and returns the store's ambiguity error once it holds more. That error means
+*"re-run setup to say which playbook this folder runs"* — never a broken workspace.
+
+**Two names, and they are not the same object.** The config's `playbook` is the instance's
+**address**: passed on every call, stable for the life of the install. The reserved `playbook-name`
+entry is the **label**: what reports and decision contexts show the owner. Setup writes them
+identical; a rename upserts the entry and leaves the address alone.
+
+**Enumerating what a workspace runs is a tool the connector still owes — and deliberately not a
+`pb-*` verb.** Every `pb-*` tool *addresses* an instance (that is what the `playbook` argument is);
+a tool that *enumerates* instances is a workspace-level read, and it belongs with the generic Jupi
+tools — **`list-my-playbooks-tool`**, the sibling of `list-my-decisions-tool`: same family, same
+shape (`groupId` / `groupSlug`, `topK`), returning the playbooks the authenticated caller runs
+there with enough of each to choose between them — `{name, createdAt, dossierCount, entryCount,
+stageCount}`. An empty array is a fresh workspace: a success, the way `stages: null` is.
+
+Until it is served, a caller that needs to know probes **by name** (`pb-get-stages` with a candidate
+`playbook` — an unknown name errors, and that error IS the "this one is new" answer) and says
+plainly that it cannot enumerate, rather than presenting as empty a workspace it never read.
 
 ## Decisions ↔ playbook — the link, and the settlement ledger the backend still owes
 

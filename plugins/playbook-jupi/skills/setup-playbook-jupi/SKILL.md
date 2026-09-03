@@ -2,14 +2,14 @@
 name: setup-playbook-jupi
 description: >-
   Bootstrap a Playbook-Jupi workspace — one attended run that installs the user's declared world.
-  It interviews the owner (when nothing is written down yet, it writes their process and their
-  list from the conversation), writes the instance config itself, DECLARES the playbook instance
-  the workspace runs, then reads the source documents and EXTRACTS the playbook from them: the
+  It asks up front whether this is a NEW playbook or one already running here, so a workspace can
+  run several. It interviews the owner (when nothing is written down yet, it writes their process
+  and their list from the conversation), writes the instance config, DECLARES the playbook
+  instance, then reads the source documents and EXTRACTS the playbook from them: the
   declared lifecycle, decision points with stable ids and scope axes, entries split
-  declared/inferred, and declared holes — never anything validated, extraction has no such
-  authority. It then creates the tracked dossiers and renders the human-readable projection from
-  the structured rows. Idempotent — re-run to
-  refresh; owner-validated entries are never overwritten. Run once per workspace. Not for: running
+  declared/inferred, and declared holes — never anything validated. It then creates the tracked
+  dossiers and renders the human-readable projection from the structured rows. Idempotent — re-run
+  to refresh; owner-validated entries are never overwritten. Run once per playbook. Not for: running
   the process (act-or-decide), watching inbound (refresh-backlog), or setting up an open-world
   proactive-jupi workspace (setup-proactive-jupi).
 disable-model-invocation: true
@@ -38,7 +38,9 @@ default). A question that only a human can answer is worth asking; every other q
 > Jupi connector — load them via ToolSearch by logical name; every call is tenant-scoped
 > server-side from the connector's auth (`shared/playbook-contract.md`) — no schema to apply, no
 > dependency to install, no credential anywhere. Config (`.playbook-jupi/config.local.json`,
-> resolving against the CWD walking up) carries only non-secret keys.
+> resolving against the CWD walking up) carries only non-secret keys. **Once the prelude has settled
+> which playbook this folder runs, every `pb-*` call carries it** (`playbook`) — that is what lets a
+> workspace run several.
 
 ## Contract (hard — never transgress)
 - ✅ **Write only through the `pb-*` tools** (entries, lifecycle, dossiers), **the projection file**
@@ -70,11 +72,30 @@ default). A question that only a human can answer is worth asking; every other q
    `*.local.json` so nothing local can be committed. No key holds a secret — the store's auth is
    the connector's.
 
-   **Four things are the user's to answer, and not one of them is a path they type.** Ask them as
+   **Five things are the user's to answer, and not one of them is a path they type.** Ask them as
    questions about their work, one at a time; resolve each to a value yourself, then read it back
    for confirmation:
    - **Which workspace** (`jupiWorkspace`) — the Jupi team space this process belongs to. Probe what
      the connector answers for and propose it; ask only to disambiguate.
+   - **Which playbook** (`playbook`) — *a new process here, or the one already running?* **Ask this
+     before anything below**, because every later answer hangs on it, and never skip it: a setup
+     that probes, finds a playbook and quietly refreshes it turns a run meant to install a *second*
+     process into an overwrite of the first. **List what the workspace runs**
+     (`list-my-playbooks-tool` — a generic Jupi tool like `list-my-decisions-tool`, not a `pb-*`
+     verb: it enumerates instances rather than addressing one) and put the choice in the owner's
+     words — *"this workspace already runs « X » — 34 items, 19 decision points. Are you adding a
+     new process here, or refreshing that one?"*
+     - **Nothing runs here yet** → nothing to ask: say the fact (*"nothing runs here yet — I'm
+       installing your first playbook"*) and move on.
+     - **Refreshing one of them** → its name is `playbook`, and every `pb-*` call in this run and
+       in every later run carries it.
+     - **A new one** → §4 asks its name; check it against the listing, and treat a name already
+       there as a **refresh of that instance**, never a second one under a suffix — say which one
+       you landed on.
+     **The listing tool may not be served yet** (`shared/playbook-contract.md`). Then probe by name
+     instead: ask what they call this process, `pb-get-stages` with it, an unknown name meaning
+     *new*. Say plainly that you cannot enumerate — never present a workspace as empty on the
+     strength of a probe you didn't run.
    - **Where the process is written down** (`playbookSources`) — *"where is your process written —
      a doc, a Notion page, a wiki?"* Then **go find it**: scan the working tree and search the
      connected stores (Drive, Notion) for what they named. Show what you found, confirm, and resolve
@@ -100,15 +121,18 @@ default). A question that only a human can answer is worth asking; every other q
    declared (§Extraction, step 6).
 2. **Jupi is the blocking gate — and the store now lives behind it.** Probe
    `search-decisions-tool` (1 result, `groupSlug: jupiWorkspace`) — `{"items":[]}` is a success;
-   `Group not found` blocks — **and probe one `pb-*` tool** (`pb-get-stages`; `null` is a success,
-   it just means no lifecycle yet). A connector that doesn't serve the playbook tools blocks —
+   `Group not found` blocks — **and probe one `pb-*` tool** (`pb-get-stages`, carrying the
+   `playbook` settled in §1; `null` is a success, it just means no lifecycle yet). An *ambiguous*
+   answer is not a block either: it says the workspace runs several instances and you called
+   without naming one — name it and re-probe. A connector that doesn't serve the playbook tools blocks —
    give the fix and re-probe (bounded by the no-answer rule). Nothing else blocks setup.
 3. **Sources present:** every `playbookSources` doc and the `dossierSource` resolve and are
    readable — the ones they had and the ones you wrote alike. A source that exists but won't read
    is a prelude stop, not a mid-run surprise. (One that doesn't exist was step 1's job.)
-4. **The playbook's name** — propose one extracted from the `playbookSources` (the main document's
-   title, or how the owner refers to the process) and have the owner confirm or correct it here;
-   on a re-run where a `playbook-name` entry already exists, show the current name and confirm.
+4. **The playbook's name** — **new** (§1): propose one extracted from the `playbookSources` (the
+   main document's title, or how the owner refers to the process), have the owner confirm or
+   correct it, and check it against §1's listing. **Refresh** (§1): the name is the instance they
+   chose — show its `playbook-name` entry and confirm it still reads right.
    Asked here because it is **what the instance is created under** (§The instance, the first write
    after the boundary) as well as the reserved `playbook-name` entry. This is the name decisions and
    reports will use (*"as part of the playbook « <name> »"*), so it must be the owner's word for it,
@@ -140,8 +164,8 @@ default). A question that only a human can answer is worth asking; every other q
    closing report (*"running without a brain — re-run setup any time to add it"*). Never block,
    never re-ask later in the run.
 6. **The two routines — say what you'll create, and get the go-ahead here.** After the boundary you
-   create two cloud-scheduled routines, `Playbook-Jupi — catchup` and `Playbook-Jupi — daily`
-   (`reference/routine-prompts.md`). Creating a standing automation is exactly what a permission
+   create two cloud-scheduled routines, `Playbook-Jupi — <playbook> — catchup` and
+   `Playbook-Jupi — <playbook> — daily` (`reference/routine-prompts.md`). Creating a standing automation is exactly what a permission
    gate stops on — in auto mode it will refuse a second one that has no explicit consent in the
    conversation — so the consent lives here, in the user's words: name both, say what each does and
    when (in their clock), and ask for one explicit yes. Then **inventory what the routines must
@@ -168,20 +192,21 @@ tool that creates an instance; every other `pb-*` write — lifecycle, entries, 
 addresses one that already exists. So this is the first thing you do once the boundary is crossed,
 before extraction, and you narrate it like any other step.
 
-`pb-create-playbook` with the name confirmed in the prelude. **Idempotent on the name**: a re-run
-returns `created:false`, touches nothing, and is the normal path — say *"the playbook « <name> »
-already exists here, refreshing it"* rather than reporting it as a problem.
+`pb-create-playbook` with the name confirmed in the prelude. **Idempotent on the name**: re-creating
+returns `created:false`, touches nothing. **The prelude already settled which of the two things you
+are doing** — there is nothing left to infer here:
+- **New** (§1) → the instance is created; say it now exists. `created:false` means the name was
+  taken between the listing and this call: report the collision and refresh *that* instance rather
+  than inventing a variant of the name.
+- **Refresh** (§1) → `created:false` is the normal path. Say *"the playbook « <name> » already
+  exists here, refreshing it"*, never as a problem.
 
-**Three states, and only one of them is a stop.** The gate's `pb-get-stages` probe (prelude §2)
-already told you which one you are in:
-- `stages: null` → **a fresh workspace**: create, and say the instance now exists.
-- **stages come back** → this workspace already runs a playbook: a re-run. Read its
-  `playbook-name` entry and show it. Same name → carry on, refreshing. **A different name** → you
-  are about to make it the workspace's second playbook, which the skills cannot address (they omit
-  the `playbook` argument, legal only while there is exactly one). **Stop and say so**: one playbook
-  per workspace, and a second process needs its own Jupi workspace. Never resolve this by creating.
-- **the probe itself came back ambiguous** → more than one instance is already there; the workspace
-  is unusable as-is. Report it and stop.
+**A workspace that already runs something else is not a stop.** Every `pb-*` call in this run
+carries the `playbook` from config, so a second process lives beside the first and neither
+addresses the other — the workspace slug stopped being the unit of isolation the moment the name
+started travelling (`shared/playbook-contract.md`). The one thing still worth stopping for: an
+owner who meant *new* landing on an existing instance they don't recognize — show it and ask before
+writing a single row into it.
 
 ## Extraction — declare the map, holes included (§1–§4)
 
@@ -283,10 +308,13 @@ belongs in an entry first.
 daily full sweep), the carried-config rule, the run lease, the fixed names, and **the wiring a
 routine must be created with**. The short version of what you do here:
 
-- **Two cloud-scheduled routines, and only two**: `Playbook-Jupi — catchup` (business hours,
-  hourly, cheap no-op exit) and `Playbook-Jupi — daily` (one full sweep; Friday playbook
-  review). Fixed names — the reconcile matches on them, and they must not collide with the
-  proactive pair on the same account.
+- **Two cloud-scheduled routines, and only two** — **per playbook**, so their names carry it:
+  `Playbook-Jupi — <playbook> — catchup` (business hours, hourly, cheap no-op exit) and
+  `Playbook-Jupi — <playbook> — daily` (one full sweep; Friday playbook review). The reconcile
+  matches on the exact qualified name; unqualified names would make a second playbook's routines
+  collide with the first's, and they must not collide with the proactive pair on the same account
+  either. *(A pre-existing unqualified pair from an older setup belongs to this playbook when it is
+  the workspace's only one: rename it in place rather than creating a duplicate.)*
 - **Create them wired, not bare.** Each create carries what the prelude inventoried:
   `mcp_connections` (the Jupi connector and the watched source's), `enabled_plugins` +
   `extra_marketplaces` (the plugin and its dependency, from this marketplace), and the
@@ -364,8 +392,8 @@ skill names — and the person it was for could not use a word of it. What the r
 
 ## Where you write
 - **The playbook store** via the `pb-*` tools: the **instance** (`pb-create-playbook`, the first
-  write — one per workspace, never a second), then the lifecycle entry, playbook entries and dossier
-  rows it holds.
+  write — the one the prelude settled, new or existing; never a second under a variant of a name
+  already there), then the lifecycle entry, playbook entries and dossier rows it holds.
 - **The projection file** at `projectionTarget`.
 - **The instance folder**: `.playbook-jupi/config.local.json` (the interview's output, plus
   `inboundStage` once the lifecycle is declared), `.playbook-jupi/.gitignore`, and — only when the

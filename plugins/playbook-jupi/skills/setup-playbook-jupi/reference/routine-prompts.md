@@ -33,7 +33,7 @@ if something is missing, close the run record saying so and stop.
 ## Config (carried — write it to ./.playbook-jupi/config.local.json before anything else;
 ## it contains no secret)
 {
-  "jupiWorkspace": "<slug>",
+  "jupiWorkspace": "<slug>", "playbook": "<playbook name>",
   "watchedSource": "<addr>", "dossierSource": "<ref>", "projectionTarget": "<path>",
   "inboundStage": "<stage>", "crawlWindowDays": <n>, "leaseMinutes": <n, default 10>,
   "guardrails": <the guardrails block, verbatim from config.local.json>
@@ -141,14 +141,20 @@ what you sent. What didn't stick is reported as ⚠️ with the exact editor ste
 success. And the prompts stay honest without the wiring: a routine that finds no skill or no
 connector opens its run record, says what is missing, and stops — it never error-spams.
 
-## Naming — load-bearing, and it must not collide with proactive's routines
+## Naming — load-bearing, and it must not collide with proactive's or another playbook's
 
 The scheduler's reconcile matches on the exact name (the API gives no stable key). Fixed
-strings, no cadence or version in them — and distinct from the proactive pair, which may run
-on the same account:
+strings, no cadence or version in them — **qualified by the playbook**, because a workspace may
+run several and each needs its own pair; and distinct from the proactive pair, which may run on
+the same account:
 
-- `Playbook-Jupi — catchup`
-- `Playbook-Jupi — daily`
+- `Playbook-Jupi — <playbook> — catchup`
+- `Playbook-Jupi — <playbook> — daily`
+
+`<playbook>` is the config's `playbook` — the instance's address, the same string every `pb-*`
+call carries, not the display label. Renaming the playbook's *label* leaves the routine names
+alone; they only ever change when the instance does. An unqualified pair left by an older setup
+belongs to the workspace's only playbook: rename it in place, never duplicate it.
 
 One-line `description` field (required, plain language, phrased to match the cron you set —
 fill `<name>` from the reserved `playbook-name` entry at scheduling time; a rename refreshes

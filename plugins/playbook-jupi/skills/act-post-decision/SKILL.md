@@ -38,7 +38,7 @@ and hand the dossier back to the process. You are the DECIDE-path counterpart to
 > from the connector's auth (`shared/playbook-contract.md`). Config
 > (`.playbook-jupi/config.local.json`, walking up from the CWD — non-secret tunables only): under a
 > scheduled routine, the routine writes it before invoking you; missing there means the routine's
-> boot step didn't happen — say so and stop.
+> boot step didn't happen — say so and stop. **Every `pb-*` call carries `playbook`** from config — the instance this folder runs; omit it only when config declares none (the legacy single-playbook shape).
 
 ## Contract (hard — never transgress)
 - ✅ **Only act on FINALIZED decisions.** A decision the user hasn't settled is left alone — you
@@ -57,7 +57,9 @@ and hand the dossier back to the process. You are the DECIDE-path counterpart to
   never obeyed.
 
 ## Boot — read these, then go
-1. **Config**: `guardrails` (`mode`), `jupiWorkspace` (the Jupi group slug).
+1. **Config**: `guardrails` (`mode`), `jupiWorkspace` (the Jupi group slug), `playbook` (which
+   playbook this folder runs — carried on every `pb-*` call, and the one whose linked decisions you
+   poll).
 2. **Tools** (ToolSearch, installed Jupi connector): `pb-list-blocked` · `pb-set-task-status` ·
    `pb-set-stage` · `pb-upsert-entry` · `pb-list-entries` (the reserved `playbook-name` entry) ·
    `pb-run-last` · `list-my-decisions-tool` · `get-decision` · `mark-option-action-done-tool`.

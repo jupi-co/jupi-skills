@@ -19,7 +19,8 @@ A thin trigger over the watch + planner, scoped to a single dossier. **You add n
 your own** — classification, guardrails and the next step all belong to the skills you invoke.
 
 1. **The lease** (same four names, same rule as `go` — `pb-run-last`), then `pb-run-open`
-   (`process-reply`).
+   (`process-reply`). As in `go`, read `playbook` from config first and carry it on every `pb-*`
+   call.
 2. **`refresh-backlog`** — the normal sweep: it attaches the new inbound to its dossier (or
    reports it `unmatched`/`ambiguous`). If the user pointed at a specific mail, make sure the sweep
    window covers it; you never bypass the watch's matching by attaching by hand.

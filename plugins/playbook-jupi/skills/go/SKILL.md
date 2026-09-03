@@ -18,7 +18,9 @@ A thin trigger over the catchup path. **You add no reasoning of your own** — e
 belongs to the skills you invoke; your job is sequence, lease, and run record.
 
 1. **The lease** (same rule as the routines — `reference/routine-prompts.md` in
-   `setup-playbook-jupi`): `pb-run-last` (a tool on the installed Jupi connector, via ToolSearch)
+   `setup-playbook-jupi`). Read `playbook` from config first and carry it on every `pb-*` call —
+   the lease and the run record belong to one playbook, not to the workspace. Then: `pb-run-last`
+   (a tool on the installed Jupi connector, via ToolSearch)
    for each of `catchup`, `daily`, `go`, `process-reply`. A live run younger than `leaseMinutes`
    (config, default 10) → say "a run is already working — it will pick this up" and stop. A
    stalled one → take over, and say so.

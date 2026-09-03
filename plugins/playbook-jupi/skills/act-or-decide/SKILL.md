@@ -32,7 +32,7 @@ is the prior, decisions are the evidence, rules are the posterior (§1).
 > Jupi connector — load them via ToolSearch by logical name (the runtime resolves the server) —
 > and every call is tenant-scoped server-side from the connector's auth; you never pass or see a
 > user id (`shared/playbook-contract.md`). Config (`.playbook-jupi/config.local.json`, walking up
-> from the CWD) carries only non-secret tunables.
+> from the CWD) carries only non-secret tunables. **Every `pb-*` call carries `playbook`** from config — the instance this folder runs; omit it only when config declares none (the legacy single-playbook shape).
 
 ## Contract (hard — never transgress)
 - ✅ **Write only the playbook store + Jupi.** The store via the `pb-*` tools (never any other
@@ -51,8 +51,10 @@ is the prior, decisions are the evidence, rules are the posterior (§1).
 
 ## Boot — read these, then go
 1. **Config**: `guardrails` (`mode` draft/perform — default `draft`; `decisionBudget` default `5`),
-   `jupiWorkspace`, `inboundStage`. Any missing key takes its default; a half-filled block never
-   reads as "unbounded".
+   `jupiWorkspace`, `playbook` (which playbook this folder runs — carried on every `pb-*` call),
+   `inboundStage`. Any missing key takes its default; a half-filled block never
+   reads as "unbounded". No `playbook` key is the legacy shape: call without it, and if the store
+   answers *ambiguous* say the workspace runs several and setup must be re-run to name this one.
 2. **Tools**: load the `pb-*` and decision tools you'll use from the installed Jupi connector via
    ToolSearch. A connector that doesn't serve them → report and stop (nothing to run against).
 3. **The frame**:
