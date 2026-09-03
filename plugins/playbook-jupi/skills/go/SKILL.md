@@ -26,7 +26,10 @@ belongs to the skills you invoke; your job is sequence, lease, and run record.
    `pb-run-last`.
 3. **The catchup path, exactly**: `act-post-decision` (everything FINALIZED since last run is
    carried out, dossiers unblocked) → `refresh-backlog` (new inbound attached) → `act-or-decide`
-   **restricted to the dossiers just unblocked or just attached** — the daily owns full sweeps.
+   **restricted to the dossiers `act-post-decision` reports — released, or named by a
+   settlement — plus the ones just attached**; the daily owns full sweeps. A settlement that gates
+   no dossier (an escalated inbound, a global rule) still counts: it was carried out and recorded
+   by `act-post-decision`, and the dossiers it names get re-planned.
 4. `pb-run-close` honestly (`ok` | `degraded` | `failed`), then end with **one stitched
    user's version** of everything the invoked skills did (rules: act-or-decide's
    `reference/REPORTING.md`, §Composition — assistant voice, the user's language) — handoff

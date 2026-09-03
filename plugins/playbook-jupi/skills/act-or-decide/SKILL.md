@@ -143,9 +143,18 @@ Per decision point touched:
 - **Post via the existing machinery** (kept as-is): the producer↔validator loop
   (`reference/ORCHESTRATION.md` + `reference/VALIDATOR.md`) gates every DECIDE before it reaches the
   user — no PASS, no post. Then `create-decision-tool` (`groupSlug: jupiWorkspace`,
-  `allowWorkspaceContributions: false`, STARTED), options via `add-decision-options-tool`,
+  `allowWorkspaceContributions: false`, STARTED, **`linkedPlaybook: <the playbook-name entry>`** —
+  the structural link `act-post-decision` discovers settlements by; a decision without it is
+  invisible to the loop the moment it gates no dossier), options via `add-decision-options-tool`,
   structured option-actions via `add-option-actions-tool` (`{title, instruction, tool}` — full
-  executable text; these live in Jupi, never in the store). Description is HTML, links everywhere,
+  executable text; these live in Jupi, never in the store). **Every option carries at least one
+  action, the escalate / do-nothing / "the owner handles it" option included** — for those, the
+  bookkeeping action `act-post-decision` performs as a store write (*record in the playbook that
+  <case> was settled as <answer>*). An action-less option can be chosen but never marked carried
+  out, and the loop cannot tell it from one it already handled. **When the connector serves the
+  settlement ledger** (`pb-record-decision`, `shared/playbook-contract.md`), record the question
+  you just asked — decision id, point, scope, dossiers, kind — right after posting: that row is how
+  the post-decision loop later knows what the answer is *about*, structurally, gated dossier or not. Description is HTML, links everywhere,
   say **"Jupi"** never the plugin name. Capture the decision permalink the tool returns.
 - **Gate the dossiers**: `pb-set-task-gating` (the dossier, the decision id array) +
   `pb-set-task-status` → `blocked` for every clustered dossier. `act-post-decision` unblocks

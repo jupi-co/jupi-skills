@@ -49,15 +49,22 @@ if something is missing, close the run record saying so and stop.
 2. Open your run record: pb-run-open (catchup). Read pb-run-last (catchup, 1) — if the
    previous run failed or stalled, open your report by saying so.
 3. THE CHEAP NO-OP CHECK — two reads, then exit if quiet:
-   a. pb-list-blocked → collect gating decision ids → get-decision each: any newly
-      FINALIZED?
+   a. Any settled decision of this playbook not yet absorbed — act-post-decision's
+      discovery: the settlement ledger (pb-list-settlements, pending) when the connector
+      serves it; otherwise BOTH interim sources — the blocked dossiers' gating decisions
+      AND the playbook-linked FINALIZED decisions (list-my-decisions → get-decision →
+      linked to this playbook) with a selected-option action still to-do, or closed since
+      the last successful run and carrying no action. The blocked rows alone miss every
+      settlement that gates no dossier.
    b. One filtered search on the watched source newer than the backlog cursor: any new
       inbound?
    Neither → close the run (pb-run-close, ok, "no-op: nothing settled, nothing inbound")
-   and STOP. This exit must stay cheap — boot plus these two reads, nothing else.
+   and STOP. This exit stays as cheap as the tools allow — boot plus these reads, nothing
+   else; the linked-decision read is bounded at 50 and is the price of missing nothing.
 4. When there IS work: run act-post-decision (carries out what was settled, unblocks),
    then refresh-backlog (attaches the new inbound), then act-or-decide restricted to the
-   dossiers just unblocked or just attached — not the full sweep; the daily owns that.
+   dossiers act-post-decision reports (released, or named by a settlement) plus the ones
+   just attached — not the full sweep; the daily owns that.
 5. Close the run record honestly (pb-run-close: ok | degraded [{"what","cost"}] |
    failed "<why>"). Never close 'ok' over a tool that didn't answer.
 6. When step 4 ran, end with the user's version of the report — ONE stitched narrative
@@ -84,7 +91,8 @@ if something is missing, close the run record saying so and stop.
 1. Write the config file. Load the pb-* tools via ToolSearch. Same lease check as the
    catchup (pb-run-last on each name; yield to a live run younger than leaseMinutes).
    Then pb-run-open (daily); read pb-run-last (daily, 1) and mention a bad previous run.
-2. act-post-decision — carry out everything settled since last run.
+2. act-post-decision — carry out everything settled since last run, from both sources
+   (the blocked rows and the playbook-linked decisions).
 3. refresh-backlog — full sweep of the watched source from the cursor.
 4. act-or-decide — the full planner pass over every open dossier: next steps, due
    follow-ups (timing entries), decisions, handoff checklist.
