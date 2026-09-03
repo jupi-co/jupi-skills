@@ -44,10 +44,76 @@ name (`created:false` on a re-run, nothing touched), which makes a rename an ups
 `playbook-name` entry, never a second instance.
 
 Each tool takes an optional `playbook` argument — *"omit when the workspace has exactly one; an
-unknown name is an error, never a new playbook."* **The skills omit it**, which is legal only while
-the workspace holds exactly one instance. Until they pass it, **one playbook per Jupi workspace** is
-a hard constraint, and the workspace slug is the unit of isolation between two processes (or between
-a rehearsal and a live install).
+unknown name is an error, never a new playbook."* **The skills pass it**, from the `playbook` key
+their instance config carries, which is what lets **one workspace run several playbooks** side by
+side — two unrelated processes, or a rehearsal next to a live install. A config with no `playbook`
+key is the legacy shape: the argument is omitted, which stays legal while the workspace holds
+exactly one instance and returns the store's ambiguity error once it holds more. That error means
+*"re-run setup to say which playbook this folder runs"* — never a broken workspace.
+
+**Two names, and they are not the same object.** The config's `playbook` is the instance's
+**address**: passed on every call, stable for the life of the install. The reserved `playbook-name`
+entry is the **label**: what reports and decision contexts show the owner. Setup writes them
+identical; a rename upserts the entry and leaves the address alone.
+
+**Enumerating what a workspace runs is a tool the connector still owes — and deliberately not a
+`pb-*` verb.** Every `pb-*` tool *addresses* an instance (that is what the `playbook` argument is);
+a tool that *enumerates* instances is a workspace-level read, and it belongs with the generic Jupi
+tools — **`list-my-playbooks-tool`**, the sibling of `list-my-decisions-tool`: same family, same
+shape (`groupId` / `groupSlug`, `topK`), returning the playbooks the authenticated caller runs
+there with enough of each to choose between them — `{name, createdAt, dossierCount, entryCount,
+stageCount}`. An empty array is a fresh workspace: a success, the way `stages: null` is.
+
+Until it is served, a caller that needs to know probes **by name** (`pb-get-stages` with a candidate
+`playbook` — an unknown name errors, and that error IS the "this one is new" answer) and says
+plainly that it cannot enumerate, rather than presenting as empty a workspace it never read.
+
+## Decisions ↔ playbook — the link, and the settlement ledger the backend still owes
+
+`create-decision-tool` links a decision to the playbook structurally (`linkedPlaybook`, by name);
+`get-decision` returns it (`linkedPlaybook: {id, name}`). **The planner passes it on every decision
+it posts** — it is how the post-decision loop finds a settlement that gates no dossier.
+
+**A decision's lifecycle ends at FINALIZED.** The owner answered; the decision has nothing more to
+say. Whether a playbook has *absorbed* that answer is the playbook's state, not the decision's — so
+the fact lives in the playbook domain, never as an `EXECUTED` status on the Decide side. That is the
+**settlement ledger: the questions this playbook asked, and the answers it absorbed** — one row per
+decision, cascading from both the playbook and the decision. Three verbs, and they carry `playbook`
+like every other `pb-*` tool:
+
+- **`pb-record-decision`** — at creation: *this playbook raised decision X for point P, scope S,
+  dossiers D, of kind `instance` | `rule` | `out_of_script` | `parameter` | `asset` | `amendment`.*
+  Arguments `decision_id` (uuid), `point_id`, `scope_key?`, `dossier_ids?` (empty for a settlement
+  that gates nothing), `kind`, `run_id?`. The context becomes structured; nothing is parsed out of a
+  description again, and a decision that gates no dossier is on the record like any other.
+  Idempotent on the decision — a second record returns `recorded:false`, row untouched.
+- **`pb-list-settlements`** (`status`: `pending` — the default — `applied` | `all`) — the
+  server-side join: decisions this playbook recorded **∧** FINALIZED on the Decide side **∧** no
+  `applied_at`. The loop's whole input, the way `pb-list-blocked` was — one read, no window. Each
+  row already carries what the loop would otherwise have re-fetched: `point_id`, `scope_key`,
+  `dossier_ids`, `kind`, `title`, `url`, `closed_at`, `selected_option_ids`, and the **selected**
+  options' `actions` (`id`, `option_id`, `tool`, `title`, `instruction`, `status`, `done_at`).
+  **That is what spares a `get-decision` per row**, not just the search.
+- **`pb-apply-settlement`** (`decision_id`, `run_id`, `effects`) — the loop sets `applied_at` with
+  the run id and the effects, a free-form object (traces, ids, counts: entries written, stages
+  moved, dossiers released). Idempotent: applying again returns `applied:false`, effects untouched.
+
+**Both idempotency guards live in the database, not in a read-then-write** — a unique constraint on
+recording, an `applied_at IS NULL` filter on applying — so two concurrent runs can neither
+double-insert nor overwrite the first run's effects.
+
+**The ledger only holds what was recorded.** A decision finalized before `pb-record-decision`
+existed, or posted by hand, is not in it and never will be — there is no backfill. So the interim
+below is not simply switched off the day the ledger is served: it stays as the second read until no
+un-recorded FINALIZED decision of this playbook is left un-absorbed. Until then, the loop runs the
+**interim** measured against the live tools: it
+reads the 50 most recent decisions and opens each FINALIZED one to check the link
+(`search-decisions-tool`'s `activeSince` **ignores finalization** — a decision closed inside the
+window is not returned, its last activity stays at creation — and the list's `hasPendingAction`
+**counts the un-chosen options' actions**, so neither filters "settled and not yet absorbed"); and
+"absorbed" is derived — every selected-option action `done` — which is why every option must carry
+at least one action, and why an action-less settlement is recorded inside a time window rather than
+marked. The ledger retires all three heuristics at once.
 
 ## The one invariant everything rests on (§4)
 

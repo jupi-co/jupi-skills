@@ -18,7 +18,9 @@ A thin trigger over the catchup path. **You add no reasoning of your own** — e
 belongs to the skills you invoke; your job is sequence, lease, and run record.
 
 1. **The lease** (same rule as the routines — `reference/routine-prompts.md` in
-   `setup-playbook-jupi`): `pb-run-last` (a tool on the installed Jupi connector, via ToolSearch)
+   `setup-playbook-jupi`). Read `playbook` from config first and carry it on every `pb-*` call —
+   the lease and the run record belong to one playbook, not to the workspace. Then: `pb-run-last`
+   (a tool on the installed Jupi connector, via ToolSearch)
    for each of `catchup`, `daily`, `go`, `process-reply`. A live run younger than `leaseMinutes`
    (config, default 10) → say "a run is already working — it will pick this up" and stop. A
    stalled one → take over, and say so.
@@ -26,7 +28,10 @@ belongs to the skills you invoke; your job is sequence, lease, and run record.
    `pb-run-last`.
 3. **The catchup path, exactly**: `act-post-decision` (everything FINALIZED since last run is
    carried out, dossiers unblocked) → `refresh-backlog` (new inbound attached) → `act-or-decide`
-   **restricted to the dossiers just unblocked or just attached** — the daily owns full sweeps.
+   **restricted to the dossiers `act-post-decision` reports — released, or named by a
+   settlement — plus the ones just attached**; the daily owns full sweeps. A settlement that gates
+   no dossier (an escalated inbound, a global rule) still counts: it was carried out and recorded
+   by `act-post-decision`, and the dossiers it names get re-planned.
 4. `pb-run-close` honestly (`ok` | `degraded` | `failed`), then end with **one stitched
    user's version** of everything the invoked skills did (rules: act-or-decide's
    `reference/REPORTING.md`, §Composition — assistant voice, the user's language) — handoff

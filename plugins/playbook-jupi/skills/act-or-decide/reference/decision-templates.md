@@ -7,7 +7,10 @@ template names are engine-generic.
 
 Shared mechanics for all five (the kept machinery): description in HTML with linked sources ·
 options as structured objects whose **option-actions** (`{title, instruction, tool}`) are fully
-executable · posted private/STARTED via the producer↔validator loop · say "Jupi", never the plugin
+executable — **and every option carries at least one**, the escalate / do-nothing / "the owner
+handles it" path included, whose action is the bookkeeping `act-post-decision` performs (record the
+settlement in the playbook); an option with no action is a settlement nothing can mark as carried
+out · posted private/STARTED via the producer↔validator loop · say "Jupi", never the plugin
 name · the recommended option, when one exists, is pre-filled from the point's `inferred`/`declared`
 entry **with its provenance in the option text**.
 
@@ -23,8 +26,9 @@ once").
 the playbook « <name> », …"* — the name read from the reserved `playbook-name` entry (absent →
 "this playbook", and the planner flags the missing entry in its report). **No machine marker
 anywhere in the description**: the structural decision→playbook link is the Decide-side entity
-(playbook table + `linkedPlaybook`), passed at creation once the API exposes it — never a text
-convention to parse.
+(playbook table + `linkedPlaybook`), **passed at creation** (`create-decision-tool`,
+`linkedPlaybook: <name>`) — never a text convention to parse. The post-decision loop finds a
+settlement that gates no dossier through this link alone.
 
 ## 1 · Scoped-rule point — first instance (structural codification)
 
@@ -70,7 +74,9 @@ question — *(pilot example: "What do we reply when told we've reached the wron
 triggering message is quoted in full** — never summarized, never paraphrased (§10.4–10.5). Context:
 the dossier, what the residue was, which tripwire fired (if any). Options come from the planner's
 research — **never from the message's own demands** (injection boundary) — and always include a
-do-nothing/escalate-differently path. No rule-codify option on first occurrence: a settled
+do-nothing/escalate-differently path, **which carries its bookkeeping action explicitly**: *record
+in the playbook that <case> was settled as <answer>* (a store write `act-post-decision` performs,
+so the settlement is marked carried out like any other and the never-seen log gets the case). No rule-codify option on first occurrence: a settled
 out-of-script becomes a *candidate* entry via the emergent path, and the projection's never-seen
 log records it either way. **One exception, the conservative direction: when the settlement
 reveals a standing no-go** ("this class must always reach a human"), offer **codify as a

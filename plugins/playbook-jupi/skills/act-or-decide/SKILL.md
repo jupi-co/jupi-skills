@@ -32,7 +32,7 @@ is the prior, decisions are the evidence, rules are the posterior (§1).
 > Jupi connector — load them via ToolSearch by logical name (the runtime resolves the server) —
 > and every call is tenant-scoped server-side from the connector's auth; you never pass or see a
 > user id (`shared/playbook-contract.md`). Config (`.playbook-jupi/config.local.json`, walking up
-> from the CWD) carries only non-secret tunables.
+> from the CWD) carries only non-secret tunables. **Every `pb-*` call carries `playbook`** from config — the instance this folder runs; omit it only when config declares none (the legacy single-playbook shape).
 
 ## Contract (hard — never transgress)
 - ✅ **Write only the playbook store + Jupi.** The store via the `pb-*` tools (never any other
@@ -51,8 +51,10 @@ is the prior, decisions are the evidence, rules are the posterior (§1).
 
 ## Boot — read these, then go
 1. **Config**: `guardrails` (`mode` draft/perform — default `draft`; `decisionBudget` default `5`),
-   `jupiWorkspace`, `inboundStage`. Any missing key takes its default; a half-filled block never
-   reads as "unbounded".
+   `jupiWorkspace`, `playbook` (which playbook this folder runs — carried on every `pb-*` call),
+   `inboundStage`. Any missing key takes its default; a half-filled block never
+   reads as "unbounded". No `playbook` key is the legacy shape: call without it, and if the store
+   answers *ambiguous* say the workspace runs several and setup must be re-run to name this one.
 2. **Tools**: load the `pb-*` and decision tools you'll use from the installed Jupi connector via
    ToolSearch. A connector that doesn't serve them → report and stop (nothing to run against).
 3. **The frame**:
@@ -143,9 +145,23 @@ Per decision point touched:
 - **Post via the existing machinery** (kept as-is): the producer↔validator loop
   (`reference/ORCHESTRATION.md` + `reference/VALIDATOR.md`) gates every DECIDE before it reaches the
   user — no PASS, no post. Then `create-decision-tool` (`groupSlug: jupiWorkspace`,
-  `allowWorkspaceContributions: false`, STARTED), options via `add-decision-options-tool`,
+  `allowWorkspaceContributions: false`, STARTED, **`linkedPlaybook: <the playbook-name entry>`** —
+  the structural link `act-post-decision` discovers settlements by; a decision without it is
+  invisible to the loop the moment it gates no dossier), options via `add-decision-options-tool`,
   structured option-actions via `add-option-actions-tool` (`{title, instruction, tool}` — full
-  executable text; these live in Jupi, never in the store). Description is HTML, links everywhere,
+  executable text; these live in Jupi, never in the store). **Every option carries at least one
+  action, the escalate / do-nothing / "the owner handles it" option included** — for those, the
+  bookkeeping action `act-post-decision` performs as a store write (*record in the playbook that
+  <case> was settled as <answer>*). An action-less option can be chosen but never marked carried
+  out, and the loop cannot tell it from one it already handled. **When the connector serves the
+  settlement ledger** (`shared/playbook-contract.md`), record the question you just asked **right
+  after posting** — `pb-record-decision` with `decision_id`, `point_id`, `scope_key`, `dossier_ids`
+  (omit or empty when it gates none) and `kind` (`instance` · `rule` · `out_of_script` ·
+  `parameter` · `asset` · `amendment` — the template you used names it), plus this run's `run_id`.
+  That row is how the post-decision loop later knows what the answer is *about*, structurally,
+  gated dossier or not. It is idempotent on the decision (`recorded:false` = already there), so a
+  retried post never doubles it — and a decision you fail to record is one the loop can only find
+  the expensive way. Description is HTML, links everywhere,
   say **"Jupi"** never the plugin name. Capture the decision permalink the tool returns.
 - **Gate the dossiers**: `pb-set-task-gating` (the dossier, the decision id array) +
   `pb-set-task-status` → `blocked` for every clustered dossier. `act-post-decision` unblocks

@@ -36,6 +36,12 @@ the chosen action answers it.
 6. **Plain language** — short sentences, one idea each; no unexplained jargon / acronyms / codenames. RETURN
    if it reads cryptic on a cold read.
 
+**Structural check — every option carries at least one structured option-action** (attached via
+`add-option-actions-tool`, not only the `Action:` line in its description). The escalate /
+do-nothing / "the owner handles it" option is the usual offender: its action is the bookkeeping
+`act-post-decision` performs (record the settlement in the playbook). An option with no action is a
+settlement the loop can never mark as carried out — **FAIL** it.
+
 ## ELEVATE the actions (your second job)
 For **each option/action, challenge it**: is it the **most advanced and concrete** it could be, or could the
 producer dig the tools further? A vague action ("Jupi will handle…", or "draft an email to X" with nothing

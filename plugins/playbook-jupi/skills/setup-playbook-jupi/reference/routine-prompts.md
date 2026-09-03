@@ -33,7 +33,7 @@ if something is missing, close the run record saying so and stop.
 ## Config (carried — write it to ./.playbook-jupi/config.local.json before anything else;
 ## it contains no secret)
 {
-  "jupiWorkspace": "<slug>",
+  "jupiWorkspace": "<slug>", "playbook": "<playbook name>",
   "watchedSource": "<addr>", "dossierSource": "<ref>", "projectionTarget": "<path>",
   "inboundStage": "<stage>", "crawlWindowDays": <n>, "leaseMinutes": <n, default 10>,
   "guardrails": <the guardrails block, verbatim from config.local.json>
@@ -49,15 +49,23 @@ if something is missing, close the run record saying so and stop.
 2. Open your run record: pb-run-open (catchup). Read pb-run-last (catchup, 1) — if the
    previous run failed or stalled, open your report by saying so.
 3. THE CHEAP NO-OP CHECK — two reads, then exit if quiet:
-   a. pb-list-blocked → collect gating decision ids → get-decision each: any newly
-      FINALIZED?
+   a. Any settled decision of this playbook not yet absorbed — act-post-decision's
+      discovery: the settlement ledger (pb-list-settlements, pending) when the connector
+      serves it, PLUS the two interim sources for as long as decisions finalized before
+      the ledger existed are still unabsorbed — the blocked dossiers' gating decisions
+      AND the playbook-linked FINALIZED decisions (list-my-decisions → get-decision →
+      linked to this playbook) with a selected-option action still to-do, or closed since
+      the last successful run and carrying no action. The blocked rows alone miss every
+      settlement that gates no dossier.
    b. One filtered search on the watched source newer than the backlog cursor: any new
       inbound?
    Neither → close the run (pb-run-close, ok, "no-op: nothing settled, nothing inbound")
-   and STOP. This exit must stay cheap — boot plus these two reads, nothing else.
+   and STOP. This exit stays as cheap as the tools allow — boot plus these reads, nothing
+   else; the linked-decision read is bounded at 50 and is the price of missing nothing.
 4. When there IS work: run act-post-decision (carries out what was settled, unblocks),
    then refresh-backlog (attaches the new inbound), then act-or-decide restricted to the
-   dossiers just unblocked or just attached — not the full sweep; the daily owns that.
+   dossiers act-post-decision reports (released, or named by a settlement) plus the ones
+   just attached — not the full sweep; the daily owns that.
 5. Close the run record honestly (pb-run-close: ok | degraded [{"what","cost"}] |
    failed "<why>"). Never close 'ok' over a tool that didn't answer.
 6. When step 4 ran, end with the user's version of the report — ONE stitched narrative
@@ -84,7 +92,8 @@ if something is missing, close the run record saying so and stop.
 1. Write the config file. Load the pb-* tools via ToolSearch. Same lease check as the
    catchup (pb-run-last on each name; yield to a live run younger than leaseMinutes).
    Then pb-run-open (daily); read pb-run-last (daily, 1) and mention a bad previous run.
-2. act-post-decision — carry out everything settled since last run.
+2. act-post-decision — carry out everything settled since last run, from both sources
+   (the blocked rows and the playbook-linked decisions).
 3. refresh-backlog — full sweep of the watched source from the cursor.
 4. act-or-decide — the full planner pass over every open dossier: next steps, due
    follow-ups (timing entries), decisions, handoff checklist.
@@ -133,14 +142,20 @@ what you sent. What didn't stick is reported as ⚠️ with the exact editor ste
 success. And the prompts stay honest without the wiring: a routine that finds no skill or no
 connector opens its run record, says what is missing, and stops — it never error-spams.
 
-## Naming — load-bearing, and it must not collide with proactive's routines
+## Naming — load-bearing, and it must not collide with proactive's or another playbook's
 
 The scheduler's reconcile matches on the exact name (the API gives no stable key). Fixed
-strings, no cadence or version in them — and distinct from the proactive pair, which may run
-on the same account:
+strings, no cadence or version in them — **qualified by the playbook**, because a workspace may
+run several and each needs its own pair; and distinct from the proactive pair, which may run on
+the same account:
 
-- `Playbook-Jupi — catchup`
-- `Playbook-Jupi — daily`
+- `Playbook-Jupi — <playbook> — catchup`
+- `Playbook-Jupi — <playbook> — daily`
+
+`<playbook>` is the config's `playbook` — the instance's address, the same string every `pb-*`
+call carries, not the display label. Renaming the playbook's *label* leaves the routine names
+alone; they only ever change when the instance does. An unqualified pair left by an older setup
+belongs to the workspace's only playbook: rename it in place, never duplicate it.
 
 One-line `description` field (required, plain language, phrased to match the cron you set —
 fill `<name>` from the reserved `playbook-name` entry at scheduling time; a rename refreshes
