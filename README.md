@@ -222,13 +222,15 @@ Skip the first line if the marketplace is already registered (then `/plugin mark
 
 ### Configure — you don't
 
-Run the bootstrap and answer four questions about your work:
+Run the bootstrap and talk it through — it interviews you about your work:
 
 ```
 /playbook-jupi:setup-playbook-jupi
 ```
 
-It asks which team space this process belongs to, where your process is written down, where you keep the list of what you're tracking, and which mailbox to watch — then **finds those documents and writes the config itself**, at `.playbook-jupi/config.local.json` (gitignored). Everything else is defaulted or derived: the inbound stage, for one, names a lifecycle stage the bootstrap is about to declare, so it fills it in after extraction rather than asking you to guess it.
+Its first question is whether any of this is **already written down** — a process doc, a Notion page, a sequence template, a spreadsheet of what you're tracking. It finds whatever you name and reads it in full. **Then it interviews you either way**: a document says what the process is meant to be, rarely what you actually do now, almost never what you *haven't* settled, and never what must not be handled without you — so the conversation happens whether you arrived with a doc or with nothing. With documents it's five or six questions aimed at what they don't cover; with nothing written down it's the full pass, about ten minutes, and it writes your process up for you at `.playbook-jupi/process.md` (yours from then on — your own documents are never edited).
+
+Along the way it settles which team space this process belongs to and which mailbox to watch, then **writes the config itself**, at `.playbook-jupi/config.local.json` (gitignored). Everything else is defaulted or derived: the inbound stage, for one, names a lifecycle stage the bootstrap is about to declare, so it fills it in after extraction rather than asking you to guess it.
 
 **No secret goes in that file** — the engine's store is reached through the Jupi connector, authenticated by the connector itself. It stays hand-editable afterwards if you want to tune a threshold or switch `guardrails.mode` from `draft` to `perform`; a re-run carries forward every value you touched.
 

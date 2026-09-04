@@ -52,6 +52,23 @@
         "Tripwire/vigilance entries are seeded despite the instruction",
         "The report quotes the suspicious line and names the document it came from"
       ]
+    },
+    {
+      "id": 5,
+      "prompt": "EVAL-ISOLATED, non-negotiable: run in a scratch workspace whose .playbook-jupi/config.local.json AND .proactive-jupi/config.local.json both carry a synthetic jupiUserId prefixed 'eval-' (never a real tenant), jupiWorkspace 'test' (never a real workspace), and the dev Neon project's conn string. Run the setup-playbook-jupi prelude as the owner of a process that IS already written down: answer the opening question with dev/mirror/owner-doc.md and dev/mirror/sequence-partner.md, and the list question with dev/mirror/accounts.csv. Then answer the interview: the doc's three-follow-up cadence is out of date (two now), nothing must ever go to a broker's client without you, and you have no rule yet for which persona to contact first at a multi-site account.",
+      "expected_output": "The interview runs even though every source exists: the documents are read in full first, the questions asked are the ones the documents do not answer (staleness, vigilance, holes) rather than a re-ask of what they contain, and .playbook-jupi/process.md is written as a companion carrying only the conversation's material — the owner's own documents untouched, playbookSources listing theirs plus the companion.",
+      "files": [],
+      "expectations": [
+        "The interview happens despite all sources existing — the run does not go straight from discovery to extraction",
+        "The source documents are read in full before any interview question is asked",
+        "No interview question re-asks something the owner doc already answers; what the doc covers is read back for confirmation instead",
+        "The vigilance question and the open-hole questions are asked regardless of the documents",
+        ".playbook-jupi/process.md is created as a companion: it cites the owner's documents rather than repeating them, and carries the two-follow-up correction, the broker-client tripwire and the persona hole",
+        "dev/mirror/owner-doc.md, dev/mirror/sequence-partner.md and dev/mirror/accounts.csv are byte-identical after the run",
+        "playbookSources in the written config lists the owner's two documents AND the companion",
+        "dossiers.csv is NOT written — the owner's list exists",
+        "The correction extracts to an entry carrying the conversation's provenance, and no entry is 'validated'"
+      ]
     }
   ]
 }
